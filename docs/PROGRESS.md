@@ -61,7 +61,7 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 - [ ] Privacy policy + terms text, reviewed by counsel
 - [ ] Pick the Oct 30 showcase title once candidates are proposed (F10)
 - [ ] Michigan IP attorney consult (trademark, copyright posture, patent strategy)
-- [ ] **New:** create a `main` branch (e.g. an empty initial commit) so this work can go up as a pull request. The repo was empty, so this branch became the default branch; afterwards, set `main` as default in repo settings
+- [ ] **New:** set `main` as the default branch (repo Settings → General → Default branch). `main` was created 2026-10-06 as an empty root commit and the work is in draft PR https://github.com/KingRam797/Play4M3/pull/1; the session cannot change repository settings
 - [ ] **New:** paste the live Store Policies v7.20 sections (10.13.10, 10.2.2, 11.16, 10.5.1, 10.1.1) into `OPEN_QUESTIONS.md` Q-001, or allowlist `learn.microsoft.com` in the build environment's network policy
 
 ---
@@ -85,7 +85,7 @@ DONE (with evidence):
 NOT RUN / NOT DONE:
 - Root cause of the 2 optional WACK failures (message text not captured yet; next run prints it)
 - WACK runtime/deployment tests (WACK ran "without application deployment" for this Centennial app)
-- Pull request: not opened, because the repo had no default branch and this branch became it (needs King, see below)
+- Pull request: opened as draft https://github.com/KingRam797/Play4M3/pull/1 against the new `main`
 - F4–F13
 BLOCKED-HUMAN: see list above (Partner Center account is the most time-critical)
 VERIFY-FIRST resolved:
