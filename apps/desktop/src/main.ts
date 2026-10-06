@@ -115,7 +115,7 @@ app.whenReady().then(() => {
           .executeJavaScript("[document.getElementById('ping').textContent, typeof require, typeof process, typeof window.station.ping].join('|')", false)
           .then((result: unknown) => {
             const [ping, req, proc, bridge] = String(result).split("|");
-            console.log(`SMOKE ping=${ping} require=${req} process=${proc} bridge=${bridge} sandbox=${String(win.webContents.getLastWebPreferences()?.sandbox)}`);
+            console.log(`SMOKE ping=${ping} require=${req} process=${proc} bridge=${bridge}`);
             const ok = ping === `ok (v${app.getVersion()})` && req === "undefined" && proc === "undefined" && bridge === "function";
             app.exit(ok ? 0 : 1);
           });
