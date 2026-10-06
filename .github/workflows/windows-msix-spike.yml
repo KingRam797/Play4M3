@@ -5,13 +5,10 @@
 name: windows-msix-spike
 
 on:
+  # No path filter during Phase 0: the spike result gates the shell decision,
+  # and path filters skip the first push of a branch.
   push:
     branches: [main, "claude/**"]
-    paths:
-      - "apps/desktop/**"
-      - "packages/core/**"
-      - ".github/workflows/windows-msix-spike.yml"
-      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 permissions:

@@ -171,7 +171,8 @@ describe("S8 IPC validation", () => {
 });
 
 describe("S8 packaging (electron-builder.yml)", () => {
-  const yml = readFileSync(new URL("../electron-builder.yml", import.meta.url), "utf8");
+  // Normalize line endings: Windows checkouts may use CRLF.
+  const yml = readFileSync(new URL("../electron-builder.yml", import.meta.url), "utf8").replace(/\r\n/g, "\n");
 
   it.each([
     ["runAsNode", "false"],
