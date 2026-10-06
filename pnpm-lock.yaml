@@ -52,7 +52,17 @@ importers:
 
   packages/providers: {}
 
-  packages/redteam: {}
+  packages/redteam:
+    dependencies:
+      '@play4m3/core':
+        specifier: workspace:*
+        version: link:../core
+      '@play4m3/guard':
+        specifier: workspace:*
+        version: link:../guard
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   packages/skills: {}
 

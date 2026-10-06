@@ -1,2 +1,2 @@
-// Placeholder. See docs/PROGRESS.md for the feature that fills this package.
-export const PACKAGE = "@play4m3/redteam" as const;
+export * from "./corpus.js";
+export * from "./obedientAttacker.js";
