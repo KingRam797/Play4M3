@@ -92,10 +92,14 @@ jobs:
           & $appcert.FullName test -appxpackagepath "${{ steps.pkg.outputs.path }}" -reportoutputpath "$PWD\wack-report.xml"
           [xml]$r = Get-Content wack-report.xml
           $overall = $r.REPORT.OVERALL_RESULT
-          $all = $r.SelectNodes("//TEST")
-          Write-Host "WACK OVERALL_RESULT=$overall tests=$($all.Count) passed=$(($all | Where-Object { $_.RESULT -eq 'PASS' }).Count)"
-          "- WACK overall result: **$overall** ($($all.Count) tests)" >> $env:GITHUB_STEP_SUMMARY
-          foreach ($t in $r.SelectNodes("//TEST[@RESULT!='PASS']")) { Write-Host "WACK non-pass: $($t.NAME) = $($t.RESULT)"; "  - $($t.NAME): $($t.RESULT)" >> $env:GITHUB_STEP_SUMMARY }
+          # RESULT may be an attribute or a child element depending on the WACK version; read either.
+          function Get-TestResult($t) { $a = $t.GetAttribute("RESULT"); if ($a) { $a } else { $t.SelectSingleNode("RESULT").InnerText.Trim() } }
+          $all = @($r.SelectNodes("//TEST"))
+          if ($all.Count -gt 0) { Write-Host "WACK first TEST node: $($all[0].OuterXml.Substring(0, [math]::Min(600, $all[0].OuterXml.Length)))" }
+          $nonPass = @($all | Where-Object { (Get-TestResult $_) -ne "PASS" })
+          Write-Host "WACK OVERALL_RESULT=$overall tests=$($all.Count) non-pass=$($nonPass.Count)"
+          "- WACK overall result: **$overall** ($($all.Count) tests, $($nonPass.Count) not PASS)" >> $env:GITHUB_STEP_SUMMARY
+          foreach ($t in $nonPass) { $line = "$($t.GetAttribute('NAME')) = $(Get-TestResult $t)"; Write-Host "WACK non-pass: $line"; "  - $line" >> $env:GITHUB_STEP_SUMMARY }
           "result=$overall" >> $env:GITHUB_OUTPUT
           if ($overall -ne "PASS") { throw "WACK result: $overall" }
 
