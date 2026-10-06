@@ -99,7 +99,12 @@ jobs:
           $nonPass = @($all | Where-Object { (Get-TestResult $_) -ne "PASS" })
           Write-Host "WACK OVERALL_RESULT=$overall tests=$($all.Count) non-pass=$($nonPass.Count)"
           "- WACK overall result: **$overall** ($($all.Count) tests, $($nonPass.Count) not PASS)" >> $env:GITHUB_STEP_SUMMARY
-          foreach ($t in $nonPass) { $line = "$($t.GetAttribute('NAME')) = $(Get-TestResult $t)"; Write-Host "WACK non-pass: $line"; "  - $line" >> $env:GITHUB_STEP_SUMMARY }
+          foreach ($t in $nonPass) {
+            $line = "$($t.GetAttribute('NAME')) = $(Get-TestResult $t) (optional=$($t.GetAttribute('OPTIONAL')))"
+            Write-Host "WACK non-pass: $line"
+            "  - $line" >> $env:GITHUB_STEP_SUMMARY
+            foreach ($m in @($t.SelectNodes("MESSAGES/MESSAGE")) | Select-Object -First 15) { $txt = $m.InnerText.Trim(); Write-Host "    msg: $($txt.Substring(0, [math]::Min(400, $txt.Length)))" }
+          }
           "result=$overall" >> $env:GITHUB_OUTPUT
           if ($overall -ne "PASS") { throw "WACK result: $overall" }
 
