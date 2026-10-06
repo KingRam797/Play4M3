@@ -1,0 +1,13 @@
+{
+  "name": "@play4m3/guard",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Dual-LLM orchestration, handles, approval gates, validators, hash-chained audit log",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@play4m3/core": "workspace:*",
+    "zod": "4.6.5"
+  }
+}

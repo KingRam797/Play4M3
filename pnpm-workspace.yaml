@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# S11 supply chain: dependency install scripts are OFF unless allowlisted here.
+# Every entry needs a DECISIONS.md line explaining why.
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+strictDepBuilds: true
+
+# Do not resolve versions published less than 3 days ago (typosquat / hijack window).
+minimumReleaseAge: 4320

@@ -1,0 +1,24 @@
+node_modules/
+dist/
+out/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+*.pem
+*.pfx
+*.p12
+*.key
+# user binaries and third-party game assets never enter the repo
+*.exe
+*.dll
+*.so
+*.dylib
+*.rom
+*.z64
+*.n64
+*.iso
+*.pak
+*.assets
+sbom*.json
+.DS_Store

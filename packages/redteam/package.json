@@ -1,0 +1,10 @@
+{
+  "name": "@play4m3/redteam",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Prompt-injection corpus, runner and metrics",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {}
+}

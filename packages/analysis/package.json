@@ -1,0 +1,10 @@
+{
+  "name": "@play4m3/analysis",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Sandboxed static-analysis worker runner and skills (ghidra-headless v1)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {}
+}
