@@ -75,4 +75,7 @@ Out of scope for the prototype: an attacker with admin on the host, kernel explo
 - **T-UI-1 Approval fatigue.** Users may approve without reading. Mitigation: show minimal, specific diffs; rate-limit approval prompts; no "approve all".
 - **T-AUD-1 Audio adversarial examples** are an open research problem. Our control is architectural (imported audio never commands), not detection.
 - **T-WIN-1 Sandbox enforcement on Windows** (S13) is not yet measured. Phase 0/1 spike reports what is actually enforced.
+- **T-LBL-1 Label forgery inside our own code.** Trust labels are plain strings; a bug that labels file content `user_typed` would bypass S1. Mitigation planned (Q-010): only UI input handlers can mint planner-visible labels.
+- **T-MSIX-1 MSIX is not a sandbox for us.** Electron requires `runFullTrust`, which runs outside AppContainer at medium integrity (D-020). OS-level isolation must come from the analysis worker design (S13), not from packaging.
+- **T-OBED-1 Literal copying defeats taint.** A compromised planner that copies untrusted text *by value* into arguments (instead of using a handle) produces untainted requests. S1 means the planner should never see that text; if it does, the remaining controls are the policy engine and the human approval gate. The S4 run shows these attempts end in `pending_approval` (6 of 106), never `executed`.
 - Jev (if enabled) is one signal among several and never the boundary: public results show 59% injection success against it.

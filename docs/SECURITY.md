@@ -8,17 +8,47 @@ Language models in the kit never get to act on their own. The planning model onl
 
 ## Enforced controls and their tests
 
+Status as of 2026-10-06. "Passes" means the test ran in a development session and passed; CI results are linked from the pull request once they run.
+
 | ID | Control | Status |
 |---|---|---|
-| S2 | Default-deny policy engine; hostile path forms rejected (traversal, absolute, drive, UNC, device namespace, ADS, 8.3 short names, reserved names, trailing dot/space, control/invisible chars, symlinks, junctions, hard-link writes) | Tests pass on Linux; junction tests run on Windows CI only |
-| S3 | Approval bound to the exact request | Policy-level tests pass; UI integration test NOT RUN (UI not built) |
-| S11 | Pinned lockfile, install scripts allowlisted, 3-day minimum release age, license allowlist, secret scan | Local scans pass; CI OSV/SBOM/gitleaks jobs defined, results pending first CI run |
+| S1 | Planner input is built only from user-labeled text and handle descriptors; untrusted text, including attacker-chosen filenames, never enters it | Canary tests pass |
+| S2 | Default-deny policy engine; hostile path forms rejected (traversal, absolute, drive, UNC, device namespace, ADS, 8.3 short names, reserved names, trailing dot/space, control/invisible chars, non-NFC, symlinks, junctions, hard-link writes) | Tests pass on Linux; NTFS junction tests run only on Windows CI (NOT RUN yet) |
+| S3 | Sensitive and untrusted-derived calls wait for a user approval bound to the exact request (single use, expiring) | Guard-level tests pass; UI click path NOT RUN (UI arrives in F5) |
+| S4 | Obedient-attacker planner, 106 attempts across 9 categories | **0 executions, 0 unauthorized**; 100 denied, 6 left waiting for a human (4 of them unflagged, see Red-team results); positive control passes |
+| S8 | Electron hardening (see checklist below) | Config audit test passes; runtime smoke test passes on Linux (sandboxed, renderer has no `require`/`process`); Windows smoke NOT RUN yet |
+| S10 | Secret patterns redacted from audit log | Redaction test passes; Credential Manager storage NOT BUILT |
+| S11 | Pinned lockfile, install scripts allowlisted, 3-day minimum release age, license allowlist, secret scan, `pnpm audit` | Local runs pass (2 build-only advisories ignored with review date, D-009); gitleaks over history passes locally; OSV NOT RUN locally (blocked network), CI job defined; SBOM CI job defined |
+| S14 | Hash-chained, redacted audit log; edits, deletions, reorders and insertions detected; truncation detected with an external anchor | Tests pass |
+| S5, S6, S7, S9, S12, S13, S15 | Not built yet | See `docs/PROGRESS.md` |
 
-Other S-items are tracked in `docs/PROGRESS.md`.
+## S8 Electron checklist
 
-## Red-team results (S5)
+Automated (apps/desktop/test/s8-config-audit.test.ts):
 
-NOT RUN. Corpus and runner arrive in Phase 1 (F3). Results will be published here per category, including failures.
+- [x] `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false` (also in workers and subframes), `webSecurity: true`, `webviewTag: false`, `allowRunningInsecureContent: false`; `app.enableSandbox()`
+- [x] Strict CSP, with no `unsafe-inline`, `unsafe-eval`, wildcards or remote origins, sent as a header and as a meta tag; no inline script, style or handlers in HTML
+- [x] Content only from `app://station` (no `file://`, no remote URLs); every other request is cancelled
+- [x] `will-navigate`, `will-redirect` and `will-frame-navigate` locked to the app origin; `window.open` always denied; `<webview>` attach blocked
+- [x] Permission handlers deny everything except audio-only microphone, for the app main frame, while push-to-talk is held
+- [x] Device, display-media and HID/serial/USB permissions denied
+- [x] IPC: closed channel list, Zod-validated payloads, sender must be the app main frame
+- [x] Preload exposes a frozen two-function API, never `ipcRenderer`
+- [x] Fuses: runAsNode off, NODE_OPTIONS off, inspect args off, asar integrity on, only load from asar
+- [x] MSIX capabilities limited to `runFullTrust` + `microphone`
+
+Manual (before each Store submission):
+
+- [ ] DevTools cannot be opened in the packaged build
+- [ ] Dragging a file or URL onto the window does not navigate
+- [ ] No outbound connections on first launch (check with a network monitor)
+- [ ] Mic indicator only lights while F9 is held
+
+## Red-team results
+
+**S4 (mock obedient attacker, corpus v1 seed, 2026-10-06):** 106 attempts; 0 executed; 100 denied by schema or policy; 6 stopped at the approval prompt. 2 of those carry an untrusted-data flag (handle references). The other 4 are unflagged: two in-scope writes, one patch export, and one fetch to the allowlisted host. They are unflagged because a fully compromised planner copied the payload's values literally (THREAT_MODEL T-OBED-1). There, the approval prompt showing the exact path and content is the last control. Per-category numbers are in the CI artifact `s4-obedient-attacker-report`.
+
+**S5 (real providers): NOT RUN.** Needs provider adapters (F9) and API keys (BLOCKED-HUMAN). Results will be published here per category, including failures.
 
 ## Reporting a vulnerability
 

@@ -22,6 +22,7 @@ Ship game code/assets or decompiled output. DRM/anti-tamper circumvention. Emula
 ```
 pnpm install          # dependency install scripts are off except the allowlist in pnpm-workspace.yaml
 pnpm check            # lint + typecheck + test + license scan + secret scan
+git config core.hooksPath .githooks   # once per clone: runs pnpm check before every commit
 pnpm test             # vitest
 ```
 

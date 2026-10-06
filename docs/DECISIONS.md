@@ -11,6 +11,8 @@ Format: **ID · date · decision** — reason — source.
 - **D-005 · 2026-10-06 · Workspace packages export TypeScript source** (`"exports": "./src/index.ts"`); typecheck is one root `tsc --noEmit`; Electron main/preload are bundled with esbuild. — Fewer build steps for a 24-day schedule; Electron cannot load `.ts` so it gets a bundle.
 - **D-006 · 2026-10-06 · License gate is an allowlist, not a denylist.** Any license not in `scripts/license-scan.mjs` ALLOWED fails, copyleft (GPL/AGPL/LGPL/SSPL/EUPL/OSL/CC-BY-SA/NC) fails explicitly. Applies to dev deps too. MPL-2.0 allowed (file-level copyleft, unmodified use). — Brief S11; unknown licenses are as risky as known-bad ones.
 - **D-007 · 2026-10-06 · Secret scan = local pattern scan (`scripts/secret-scan.mjs`, shared patterns in `packages/core/src/secrets.ts`) + gitleaks over full history in CI.** Test fixtures build fake secrets at runtime. — Same patterns feed log redaction and S10 tests.
+- **D-008 · 2026-10-06 · License exception: `truncate-utf8-bytes@1.0.2` (WTFPL).** Permissive but not on our allowlist. Pulled in only by electron-builder → sanitize-filename at build time; not in the shipped app (main/preload are esbuild bundles, the desktop package has zero production deps). Exception is pinned to name + version + license in `scripts/license-exceptions.json`; any version bump re-triggers the gate.
+- **D-009 · 2026-10-06 · Audit ignores: GHSA-ch52-4w7c-c8xp (http-cache-semantics, high) and GHSA-hp3w-g68c-fv3c (sprintf-js, moderate).** Both reach us only through electron-builder → app-builder-lib → @electron/get (build-time Electron download); no patched versions exist (`patched: <0.0.0`); not shipped. Ignored in `pnpm-workspace.yaml` (auditConfig) and `osv-scanner.toml` with `ignoreUntil = 2026-11-06`. Review then. — `pnpm audit` output this session.
 
 ## Policy engine (S2/S3)
 
@@ -20,6 +22,25 @@ Format: **ID · date · decision** — reason — source.
 - **D-013 · 2026-10-06 · Taint rules.** `taintedBy` is computed by the guard from handles referenced in planner arguments, never taken from the planner. Any tainted request needs approval, even on `approval:"none"` tools. Tainted requests may never carry network targets (`net.tainted`), approval or not. — Brief §4.2 "extra check"; untrusted data choosing an exfiltration host is the classic injection payoff.
 - **D-014 · 2026-10-06 · Sensitive tool families** (`fs.write`, `fs.delete`, `fs.move`, `exec.*`, `analysis.run`, `net.*`, `skill.*`, `patch.export`) and any `net:"allowlist"` capability must be `approval:"user"`; the manifest is rejected at load otherwise. Hosts must be plain lowercase ASCII (no IDN, no wildcard, no IP, no trailing dot).
 - **D-015 · 2026-10-06 · Approval tokens** are verified by an `ApprovalVerifier` interface in core; the HMAC implementation (single use, expiry, bound to a digest of the exact request) lives in `@play4m3/guard` on the Node side. Web build uses `DENY_ALL_APPROVALS`.
+
+## Desktop shell (S8) and MSIX
+
+- **D-016 · 2026-10-06 · Electron 44.5.1, electron-builder 26.17.0, esbuild 0.28.2** (newest releases ≥ 3 days old on 2026-10-06).
+- **D-017 · 2026-10-06 · App content is served from a custom privileged scheme `app://station`** via `protocol.handle`, never `file://` and never remote. File paths go through `canonicalizeRelative` (same code as the policy engine) and a MIME allowlist. Every response carries the CSP and security headers from `security.ts`.
+- **D-018 · 2026-10-06 · Microphone gating is driven by main-process input events** (`before-input-event`, push-to-talk key F9 held), not by renderer messages. The renderer is untrusted, so it cannot arm the mic. Audio only; video/screen never granted. A mouse/touch PTT button needs a trusted-gesture path; open design item for F6.
+- **D-019 · 2026-10-06 · Electron fuses set at package time** (runAsNode off, NODE_OPTIONS off, inspect args off, cookie encryption on, embedded asar integrity on, only load from asar, no extra file:// privileges).
+- **D-020 · 2026-10-06 · MSIX capabilities: `runFullTrust` + `microphone` only.** Note: a `runFullTrust` (Desktop Bridge) app runs at medium integrity, **outside AppContainer**. MSIX packaging is therefore not a sandbox for us. Network deny is enforced in Electron (`webRequest.onBeforeRequest`) and by never giving the main process network code. Real OS-level isolation is a job for the analysis worker (S13 spike).
+- **D-021 · 2026-10-06 · `P4M3_SMOKE=1` smoke mode in main.** Reads one text node from the renderer and the `typeof` of `require`/`process`/bridge, prints them, exits 0/1. Grants nothing. Used by CI on Linux (Xvfb) and Windows (unpacked app, exit code).
+- **D-022 · 2026-10-06 · Linux CI relaxes `kernel.apparmor_restrict_unprivileged_userns`** so Chromium's sandbox works on ubuntu-24.04 runners, instead of passing `--no-sandbox`. The S8 audit test forbids `--no-sandbox` in source.
+- **D-023 · 2026-10-06 · MSIX spike uses a throwaway self-signed cert** (`CN=P4M3 Test`, created and discarded inside the job) for sideload install only. Store submissions are signed by Microsoft (to confirm, Q-006). The test identity lives in `electron-builder.yml`; the Store build will override identity on the command line from Partner Center values (BLOCKED-HUMAN).
+- **D-024 · 2026-10-06 · Pre-commit hook `.githooks/pre-commit` runs `pnpm check`.** This session I once committed after `pnpm check` had failed (a type error in a smoke-mode line). It was caught before push and the commits were rebuilt. The hook makes that mistake impossible locally.
+
+## Guard
+
+- **D-025 · 2026-10-06 · Planner calls are `{tool, args}` only** (strict schema). Paths and hosts are derived by the guard from each tool's declared `pathArgs`/`hostArgs`; taint is computed from handle references, including handle ids embedded inside longer strings. A planner cannot supply `approvalToken`, `taintedBy`, `paths` or `net`.
+- **D-026 · 2026-10-06 · Handle descriptors use fixed vocabularies** (`sourceKind`, `valueKind`). Raw `source` strings (filenames, mod names) are attacker-controlled and never reach the planner.
+- **D-027 · 2026-10-06 · `Guard.approve()` is a method for the trusted UI only.** It is not a tool and is unreachable from model output; the S4 harness tries `guard.approve` as a tool and gets `tool.not-allowlisted`.
+- **D-028 · 2026-10-06 · Audit log truncation needs an external anchor.** A hash chain cannot detect tail deletion; `verifyChain(entries, expectedHead)` checks an anchor kept outside the log file (planned: shown in the audit view and stored in OS-protected storage).
 
 ## VERIFY-FIRST log
 
@@ -31,4 +52,6 @@ Format: **ID · date · decision** — reason — source.
 | Local runtime supports Gemma 4 | **Verified for llama.cpp** (MIT): `docs/multimodal.md` lists `gemma-4-E2B-it`, `gemma-4-E4B-it`, `gemma-4-26B-A4B-it`, `gemma-4-31B-it`; E2B/E4B listed under "Capabilities: audio input, vision input". Ollama/ONNX not checked. Gemma 4 Apache-2.0 license **not re-verified** (Hugging Face blocked by egress proxy); see OPEN_QUESTIONS Q-004. | https://raw.githubusercontent.com/ggml-org/llama.cpp/master/docs/multimodal.md | 2026-10-06 |
 | Store Policies v7.20 text | **NOT VERIFIED.** learn.microsoft.com and devdocs.xbox.com are blocked by this environment's egress proxy; a web search on 2026-10-06 surfaced only v7.18/v7.19 references. See OPEN_QUESTIONS Q-001. | — | 2026-10-06 |
 | Store package size limits | **NOT VERIFIED.** Third-party sources mention 25 GB per bundle; official page unreachable. Our package will be far below any plausible limit (<300 MB), so this does not block Phase 0. Q-002. | — | 2026-10-06 |
-| Certification turnaround, Partner Center verification time, AppContainer constraints | **NOT VERIFIED.** Q-003. | — | 2026-10-06 |
+| Certification turnaround, Partner Center verification time, AppContainer constraints | **NOT VERIFIED.** Q-003. (Engineering note: full-trust MSIX apps run outside AppContainer; see D-020. Confirm against official docs.) | — | 2026-10-06 |
+| GitHub Action pins | Commit SHAs resolved with `git ls-remote` (annotated tags dereferenced): checkout v7.0.1 `3d3c42e5`, setup-node v7.0.0 `82076278`, pnpm/action-setup v6.1.0 `ea17c68d`, upload-artifact v7.0.1 `043fb46d`, anchore/sbom-action v0.24.3 `66cbf4bc` | github.com via git | 2026-10-06 |
+| Tool binaries | gitleaks 8.30.1 linux_x64 sha256 `551f6fc8…70eb`; osv-scanner 2.6.0 linux_amd64 sha256 `ca69b3d3…b108`; actionlint 1.7.12 verified against its release checksums | GitHub release checksum files | 2026-10-06 |

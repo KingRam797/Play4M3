@@ -1,0 +1,4 @@
+#!/bin/sh
+# Brief §1.5: lint, typecheck, tests, license scan and secret scan must pass before every commit.
+# Enable once per clone: git config core.hooksPath .githooks
+exec pnpm check
