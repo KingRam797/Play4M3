@@ -47,6 +47,7 @@ jobs:
         run: |
           $pkg = Get-ChildItem out -Filter *.appx | Select-Object -First 1
           if (-not $pkg) { throw "no .appx produced" }
+          Write-Host "AppX: $($pkg.Name) $($pkg.Length) bytes"
           "path=$($pkg.FullName)" >> $env:GITHUB_OUTPUT
           "size=$($pkg.Length)" >> $env:GITHUB_OUTPUT
           "### AppX build`n- package: ``$($pkg.Name)```n- size: $([math]::Round($pkg.Length/1MB,1)) MB" >> $env:GITHUB_STEP_SUMMARY
@@ -57,6 +58,7 @@ jobs:
           $exe = Get-ChildItem out/win-unpacked -Filter *.exe | Where-Object { $_.Name -notlike "*Uninstall*" } | Select-Object -First 1
           $env:P4M3_SMOKE = "1"
           $p = Start-Process -FilePath $exe.FullName -PassThru -Wait
+          Write-Host "Smoke exit code: $($p.ExitCode)"
           "- unpacked smoke exit code: $($p.ExitCode)" >> $env:GITHUB_STEP_SUMMARY
           if ($p.ExitCode -ne 0) { throw "smoke test failed with $($p.ExitCode)" }
 
@@ -90,8 +92,10 @@ jobs:
           & $appcert.FullName test -appxpackagepath "${{ steps.pkg.outputs.path }}" -reportoutputpath "$PWD\wack-report.xml"
           [xml]$r = Get-Content wack-report.xml
           $overall = $r.REPORT.OVERALL_RESULT
-          "- WACK overall result: **$overall**" >> $env:GITHUB_STEP_SUMMARY
-          foreach ($t in $r.SelectNodes("//TEST[@RESULT!='PASS']")) { "  - $($t.NAME): $($t.RESULT)" >> $env:GITHUB_STEP_SUMMARY }
+          $all = $r.SelectNodes("//TEST")
+          Write-Host "WACK OVERALL_RESULT=$overall tests=$($all.Count) passed=$(($all | Where-Object { $_.RESULT -eq 'PASS' }).Count)"
+          "- WACK overall result: **$overall** ($($all.Count) tests)" >> $env:GITHUB_STEP_SUMMARY
+          foreach ($t in $r.SelectNodes("//TEST[@RESULT!='PASS']")) { Write-Host "WACK non-pass: $($t.NAME) = $($t.RESULT)"; "  - $($t.NAME): $($t.RESULT)" >> $env:GITHUB_STEP_SUMMARY }
           "result=$overall" >> $env:GITHUB_OUTPUT
           if ($overall -ne "PASS") { throw "WACK result: $overall" }
 

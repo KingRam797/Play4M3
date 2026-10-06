@@ -8,17 +8,17 @@ Language models in the kit never get to act on their own. The planning model onl
 
 ## Enforced controls and their tests
 
-Status as of 2026-10-06. "Passes" means the test ran in a development session and passed; CI results are linked from the pull request once they run.
+Status as of 2026-10-06. "Passes" means the test ran and passed, both locally and in CI run https://github.com/KingRam797/Play4M3/actions/runs/37469750650 (Linux + Windows) unless noted.
 
 | ID | Control | Status |
 |---|---|---|
 | S1 | Planner input is built only from user-labeled text and handle descriptors; untrusted text, including attacker-chosen filenames, never enters it | Canary tests pass |
-| S2 | Default-deny policy engine; hostile path forms rejected (traversal, absolute, drive, UNC, device namespace, ADS, 8.3 short names, reserved names, trailing dot/space, control/invisible chars, non-NFC, symlinks, junctions, hard-link writes) | Tests pass on Linux; NTFS junction tests run only on Windows CI (NOT RUN yet) |
+| S2 | Default-deny policy engine; hostile path forms rejected (traversal, absolute, drive, UNC, device namespace, ADS, 8.3 short names, reserved names, trailing dot/space, control/invisible chars, non-NFC, symlinks, junctions, hard-link writes) | Tests pass on Linux and Windows; NTFS junction tests pass on `windows-latest` |
 | S3 | Sensitive and untrusted-derived calls wait for a user approval bound to the exact request (single use, expiring) | Guard-level tests pass; UI click path NOT RUN (UI arrives in F5) |
 | S4 | Obedient-attacker planner, 106 attempts across 9 categories | **0 executions, 0 unauthorized**; 100 denied, 6 left waiting for a human (4 of them unflagged, see Red-team results); positive control passes |
-| S8 | Electron hardening (see checklist below) | Config audit test passes; runtime smoke test passes on Linux (sandboxed, renderer has no `require`/`process`); Windows smoke NOT RUN yet |
+| S8 | Electron hardening (see checklist below) | Config audit test passes; runtime smoke passes on Linux (sandboxed, renderer has no `require`/`process`) and on Windows (unpacked packaged app, exit 0) |
 | S10 | Secret patterns redacted from audit log | Redaction test passes; Credential Manager storage NOT BUILT |
-| S11 | Pinned lockfile, install scripts allowlisted, 3-day minimum release age, license allowlist, secret scan, `pnpm audit` | Local runs pass (2 build-only advisories ignored with review date, D-009); gitleaks over history passes locally; OSV NOT RUN locally (blocked network), CI job defined; SBOM CI job defined |
+| S11 | Pinned lockfile, install scripts allowlisted, 3-day minimum release age, license allowlist, secret scan, `pnpm audit` | Local + CI pass: license gate, secret scan, gitleaks (full history), `pnpm audit`, OSV (CI only; 2 build-only advisories ignored with review date, D-009), CycloneDX SBOM generated in CI |
 | S14 | Hash-chained, redacted audit log; edits, deletions, reorders and insertions detected; truncation detected with an external anchor | Tests pass |
 | S5, S6, S7, S9, S12, S13, S15 | Not built yet | See `docs/PROGRESS.md` |
 
