@@ -8,7 +8,7 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 - [x] CI: lint, typecheck, tests, license scan, secret scan (gitleaks), OSV, SBOM, Windows tests, Linux Electron smoke. All 6 jobs green on run 37469750650 (first run failed one Windows test on CRLF; fixed, D-030)
 - [x] `THREAT_MODEL.md` v0.1
 - [x] `packages/core` §4.1 types + policy engine + S2 path tests
-- [x] Hardened Electron shell (S8) + **MSIX hello-world spike PASSED** (run 37469750645): AppX built, Windows smoke exit 0, signed + sideload-installed, WACK OVERALL PASS (static test set; see D-029 caveats). Decision: keep Electron
+- [x] Hardened Electron shell (S8) + **MSIX hello-world spike PASSED** (run 37469750645): AppX built, Windows smoke exit 0, signed + sideload-installed, WACK OVERALL PASS (24 tests, 2 *optional* FAIL: App resources, Blocked executables; static test set; see D-029). Decision: keep Electron
 - [~] VERIFY-FIRST: Ghidra license/requirements verified; llama.cpp Gemma 4 support verified; **Store policy v7.20, package size limits, certification times NOT VERIFIED** (network blocked here; Q-001..Q-003)
 - [x] `PROGRESS.md` with F1–F13 and first session report
 
@@ -77,9 +77,9 @@ DONE (with evidence):
 - gitleaks 8.30.1 (sha256 verified) over git history and working tree: no leaks
 - actionlint 1.7.12: both workflows clean
 - CI run 37469750650: all 6 jobs green (check, Windows tests incl. NTFS junctions, Linux Electron smoke, gitleaks, OSV, SBOM)
-- MSIX spike run 37469750645: AppX built, Windows smoke exit 0, signed + sideload-installed, WACK OVERALL PASS (static mode)
+- MSIX spike runs 37469750645 / 37471927865: AppX built, Windows smoke exit 0, signed + sideload-installed, WACK OVERALL PASS: 24 tests, 22 PASS, 2 optional FAIL ("App resources", "Blocked executables")
 NOT RUN / NOT DONE:
-- WACK per-test details (report artifact unreadable from this environment; next run prints them to the log)
+- Root cause of the 2 optional WACK failures (message text not captured yet; next run prints it)
 - WACK runtime/deployment tests (WACK ran "without application deployment" for this Centennial app)
 - Pull request: not opened, because the repo had no default branch and this branch became it (needs King, see below)
 - F4–F13
@@ -89,7 +89,7 @@ VERIFY-FIRST resolved:
 - llama.cpp supports Gemma 4 E2B/E4B/26B-A4B/31B, with audio input for E2B/E4B: raw.githubusercontent.com/ggml-org/llama.cpp/master/docs/multimodal.md, 2026-10-06
 - NOT resolved: Store Policies v7.20, package size limits, certification times (Q-001..Q-003)
 NEXT 3 ACTIONS:
-1. Once King creates `main`, open the PR for this branch; record WACK per-test counts from the next spike log
+1. Once King creates `main`, open the PR for this branch; diagnose and fix the 2 optional WACK failures (real tile assets; check blocked-executable references)
 2. F4: S13 analysis-worker spike on Windows (job object limits, no-network, read-only input) with a self-compiled test binary + ghidra-headless skill
 3. F5 approval queue UI on the guard (closes the S3 UI half) + trusted-label minting (Q-010)
 RISKS TO 10/30:
