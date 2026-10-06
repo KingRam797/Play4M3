@@ -4,15 +4,17 @@
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>The Creation Station</title>
+    <title>Play4M3</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
-    <main>
+  <body data-loading="loading">
+    <canvas id="stage" aria-label="Loading screen. Fly and shoot the screen apart while the app loads." role="img"></canvas>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+    <main id="app" hidden>
       <h1 id="title">The Creation Station</h1>
       <p>Phase 0 shell. Hardened, offline, no binary analysis yet.</p>
       <p>Bridge check: <output id="ping">not run</output></p>
     </main>
-    <script src="renderer.js"></script>
+    <script src="boot.js"></script>
   </body>
 </html>

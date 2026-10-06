@@ -12,6 +12,10 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 - [~] VERIFY-FIRST: Ghidra license/requirements verified; llama.cpp Gemma 4 support verified; **Store policy v7.20, package size limits, certification times NOT VERIFIED** (network blocked here; Q-001..Q-003)
 - [x] `PROGRESS.md` with F1–F13 and first session report
 
+## Extra (King request, 2026-10-06)
+
+- [x] **Destructible Play4M3 loading screen** (D-032). Unit tests: 34 new (continue gate, input mapping, destructible grid, simulation). Headless Chromium end-to-end, 12/12 checks: mocked Xbox controller A, Enter, on-screen A at phone size, held-A rule, wrong buttons ignored, reduced motion, no page errors. Electron smoke: `loading=ready` (loading finished, still waiting for A). **NOT RUN:** a physical Xbox controller on Windows (the gamepad was mocked through `navigator.getGamepads`).
+
 ## Features
 
 - [x] **F1** Repo, CI, license/secret/SBOM scans, SECURITY.md, THREAT_MODEL.md. Acceptance "CI green on a clean clone": CI run 37469750650 all green

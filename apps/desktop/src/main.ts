@@ -107,16 +107,17 @@ app.whenReady().then(() => {
   void win.loadURL(`${APP_ORIGIN}/index.html`);
 
   // CI smoke test: report what the renderer's bridge check shows, then quit.
-  // Reads one text node; grants nothing.
+  // Reads a few values from the page; grants nothing.
   if (process.env["P4M3_SMOKE"] === "1") {
     win.webContents.once("did-finish-load", () => {
       setTimeout(() => {
         void win.webContents
-          .executeJavaScript("[document.getElementById('ping').textContent, typeof require, typeof process, typeof window.station.ping].join('|')", false)
+          .executeJavaScript("[document.getElementById('ping').textContent, typeof require, typeof process, typeof window.station.ping, document.body.dataset.loading].join('|')", false)
           .then((result: unknown) => {
-            const [ping, req, proc, bridge] = String(result).split("|");
-            console.log(`SMOKE ping=${ping} require=${req} process=${proc} bridge=${bridge}`);
-            const ok = ping === `ok (v${app.getVersion()})` && req === "undefined" && proc === "undefined" && bridge === "function";
+            const [ping, req, proc, bridge, loading] = String(result).split("|");
+            console.log(`SMOKE ping=${ping} require=${req} process=${proc} bridge=${bridge} loading=${loading}`);
+            // "ready" = loading finished and the loading screen is still up, waiting for the continue button.
+            const ok = ping === `ok (v${app.getVersion()})` && req === "undefined" && proc === "undefined" && bridge === "function" && loading === "ready";
             app.exit(ok ? 0 : 1);
           });
       }, 1500);

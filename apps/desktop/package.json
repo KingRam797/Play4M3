@@ -14,9 +14,10 @@
   "dependencies": {},
   "devDependencies": {
     "@play4m3/core": "workspace:*",
-    "zod": "4.6.5",
+    "@play4m3/loading-screen": "workspace:*",
     "electron": "44.5.1",
     "electron-builder": "26.17.0",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "zod": "4.6.5"
   }
 }

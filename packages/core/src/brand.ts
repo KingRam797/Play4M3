@@ -3,7 +3,7 @@
 // must use the {{BRAND}} placeholder and be rendered through renderBrand()
 // only after King clears the name (docs/OPEN_QUESTIONS.md, BLOCKED-HUMAN).
 export const BRAND = {
-  name: "U-Game?",
+  name: "Play4M3",
   domain: "play4m3.com",
   secondaryDomain: "play4m3.si",
   stationName: "The Creation Station",

@@ -38,6 +38,9 @@ importers:
       '@play4m3/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@play4m3/loading-screen':
+        specifier: workspace:*
+        version: link:../../packages/loading-screen
       electron:
         specifier: 44.5.1
         version: 44.5.1
@@ -67,6 +70,16 @@ importers:
       zod:
         specifier: 4.6.5
         version: 4.6.5
+
+  packages/loading-screen:
+    dependencies:
+      '@play4m3/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
 
   packages/providers: {}
 

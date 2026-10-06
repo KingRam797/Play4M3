@@ -1,0 +1,20 @@
+{
+  "name": "@play4m3/loading-screen",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Destructible loading screen: shoot the screen apart while loading; dismissed only by the continue button (A / Enter) once ready",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@play4m3/core": "workspace:*"
+  },
+  "scripts": {
+    "preview": "node preview/build.mjs preview.html"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

@@ -11,7 +11,7 @@
   },
   "scripts": {
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.browser.json --noEmit",
     "test": "vitest run",
     "scan:license": "node scripts/license-scan.mjs",
     "scan:secrets": "node scripts/secret-scan.mjs",
