@@ -1,0 +1,4 @@
+:root { color-scheme: light dark; --bg: #f7f7f5; --fg: #1c1c1a; }
+@media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ececea; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+main { max-width: 40rem; margin: 4rem auto; padding: 0 1rem; }

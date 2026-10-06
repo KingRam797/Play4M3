@@ -17,4 +17,8 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
+  {
+    files: ["apps/*/renderer/**/*.js"],
+    languageOptions: { globals: { ...globals.browser }, sourceType: "script" },
+  },
 );

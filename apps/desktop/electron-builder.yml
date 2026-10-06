@@ -1,0 +1,49 @@
+# MSIX/AppX packaging for the Microsoft Store (brief §4, F12). Phase 0 spike config.
+# Store identity values come from Partner Center (BLOCKED-HUMAN).
+appId: com.play4m3.station
+productName: Creation Station
+copyright: "Copyright © 2026 {{BRAND}}"
+directories:
+  output: out
+  buildResources: build
+files:
+  - package.json
+  - dist/**
+  - renderer/**
+  - "!**/*.map"
+asar: true
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+# S8: Electron fuses flipped at package time.
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  loadBrowserProcessSpecificV8Snapshot: false
+  grantFileProtocolExtraPrivileges: false
+win:
+  target:
+    - target: appx
+      arch: [x64]
+appx:
+  # Listed as a developer tool, not a game (brief §4).
+  applicationId: CreationStation
+  # Test identity. The Store build overrides these three with the Partner Center
+  # values on the command line (-c.appx.identityName=... etc.); never commit those here.
+  identityName: P4M3.CreationStation.Test
+  publisher: CN=P4M3 Test
+  publisherDisplayName: P4M3 Test
+  displayName: Creation Station
+  backgroundColor: "#161615"
+  languages: [en-US]
+  # Least privilege: full trust is mandatory for Electron; microphone for push-to-talk (S7).
+  # No internetClient, no privateNetworkClientServer, no broadFileSystemAccess.
+  capabilities:
+    - runFullTrust
+    - microphone
+  minVersion: 10.0.19041.0
+  artifactName: creation-station-${version}-${arch}.${ext}

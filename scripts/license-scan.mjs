@@ -40,7 +40,8 @@ for (const [license, pkgs] of Object.entries(byLicense)) {
     count++;
     if (pkg.name.startsWith("@play4m3/")) continue;
     const key = `${pkg.name}@${pkg.versions.join(",")}`;
-    if (exceptions[pkg.name]) continue;
+    const ex = exceptions[pkg.name];
+    if (ex && pkg.versions.length === 1 && pkg.versions[0] === ex.version && ex.license === license) continue;
     if (COPYLEFT.test(license) && !allowed(license)) failures.push(`${key}: copyleft license ${license}`);
     else if (!allowed(license)) failures.push(`${key}: license not on allowlist: ${license}`);
   }

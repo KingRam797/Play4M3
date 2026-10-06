@@ -1,0 +1,22 @@
+{
+  "name": "@play4m3/desktop",
+  "private": true,
+  "version": "0.0.1",
+  "description": "{{BRAND}}: The Creation Station desktop shell (hardened Electron, packaged as MSIX)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node build.mjs && electron .",
+    "dist:appx": "node build.mjs && electron-builder --win appx --config electron-builder.yml --publish never"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@play4m3/core": "workspace:*",
+    "zod": "4.6.5",
+    "electron": "44.5.1",
+    "electron-builder": "26.17.0",
+    "esbuild": "0.28.2"
+  }
+}
