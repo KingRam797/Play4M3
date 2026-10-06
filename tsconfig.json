@@ -13,6 +13,7 @@
   "exclude": [
     "packages/loading-screen/src/engine.ts",
     "packages/loading-screen/src/index.ts",
-    "apps/desktop/src/renderer/**"
+    "apps/desktop/src/renderer/**",
+    "apps/web/src/**"
   ]
 }

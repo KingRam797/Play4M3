@@ -18,7 +18,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["packages/loading-screen/src/**/*.ts", "packages/loading-screen/preview/**/*.ts", "apps/desktop/src/renderer/**/*.ts"],
+    files: ["packages/loading-screen/src/**/*.ts", "packages/loading-screen/preview/**/*.ts", "apps/desktop/src/renderer/**/*.ts", "apps/web/src/**/*.ts"],
     languageOptions: { globals: { ...globals.browser } },
   },
   {

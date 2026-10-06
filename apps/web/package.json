@@ -1,0 +1,17 @@
+{
+  "name": "@play4m3/web",
+  "private": true,
+  "version": "0.0.1",
+  "description": "{{BRAND}} web build (play4m3.com). No binary analysis on the web (brief §2.2).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@play4m3/core": "workspace:*",
+    "@play4m3/loading-screen": "workspace:*",
+    "esbuild": "0.28.2"
+  }
+}

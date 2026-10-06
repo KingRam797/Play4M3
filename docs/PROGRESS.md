@@ -30,7 +30,7 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 - [ ] **F10** Showcase project (open/permissive title; King picks)
 - [ ] **F11** *Stretch:* Unity IL2CPP via Cpp2IL
 - [ ] **F12** Store build: metadata, privacy URL, gen-AI disclosure, report-content action, age rating, signed MSIX, WACK, submitted
-- [ ] **F13** Web build on play4m3.com (S9)
+- [~] **F13** Web build on play4m3.com (S9). `apps/web` + `vercel.json` with S9 headers (D-033); header config test passes. Remaining: live-header CI test against the deployed preview, domain hookup (BLOCKED-HUMAN), the real web Station UI
 
 ## Security items
 
@@ -44,7 +44,7 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 | S6 | [ ] F6 |
 | S7 | [~] mic permission gated on held PTT key (S8 tests); transcript confirm pending F6 |
 | S8 | [x] audit test + runtime smoke pass on Linux and Windows (CI) |
-| S9 | [ ] F13 |
+| S9 | [~] headers configured in `vercel.json` + config test; live-header test against deployment NOT BUILT |
 | S10 | [~] redaction + patterns; Credential Manager not built |
 | S11 | [x] lockfile, pins, install-script allowlist, min release age, license gate, secret scan, gitleaks, pnpm audit, OSV, SBOM: all green in CI |
 | S12 | [ ] |

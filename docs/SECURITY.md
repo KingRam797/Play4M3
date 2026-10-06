@@ -20,7 +20,8 @@ Status as of 2026-10-06. "Passes" means the test ran and passed, both locally an
 | S10 | Secret patterns redacted from audit log | Redaction test passes; Credential Manager storage NOT BUILT |
 | S11 | Pinned lockfile, install scripts allowlisted, 3-day minimum release age, license allowlist, secret scan, `pnpm audit` | Local + CI pass: license gate, secret scan, gitleaks (full history), `pnpm audit`, OSV (CI only; 2 build-only advisories ignored with review date, D-009), CycloneDX SBOM generated in CI |
 | S14 | Hash-chained, redacted audit log; edits, deletions, reorders and insertions detected; truncation detected with an external anchor | Tests pass |
-| S5, S6, S7, S9, S12, S13, S15 | Not built yet | See `docs/PROGRESS.md` |
+| S9 | Web headers: strict CSP (no `unsafe-inline`), HSTS, nosniff, `frame-ancestors 'none'`, no-referrer, camera/mic denied | Config test passes; served locally with these headers, the page shows no CSP violations. Check against the live deployment NOT RUN |
+| S5, S6, S7, S12, S13, S15 | Not built yet | See `docs/PROGRESS.md` |
 
 ## S8 Electron checklist
 
