@@ -61,7 +61,7 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 - [ ] Privacy policy + terms text, reviewed by counsel
 - [ ] Pick the Oct 30 showcase title once candidates are proposed (F10)
 - [ ] Michigan IP attorney consult (trademark, copyright posture, patent strategy)
-- [ ] **New:** set `main` as the default branch (repo Settings → General → Default branch). `main` was created 2026-10-06 as an empty root commit and the work is in draft PR https://github.com/KingRam797/Play4M3/pull/1; the session cannot change repository settings
+- [x] Set `main` as the default branch. Done by King; confirmed 2026-10-07 via the GitHub API (`default_branch=main`) and `git ls-remote --symref` (`HEAD -> refs/heads/main`). Work is in draft PR https://github.com/KingRam797/Play4M3/pull/1
 - [ ] **New:** paste the live Store Policies v7.20 sections (10.13.10, 10.2.2, 11.16, 10.5.1, 10.1.1) into `OPEN_QUESTIONS.md` Q-001, or allowlist `learn.microsoft.com` in the build environment's network policy
 
 ---
