@@ -109,6 +109,27 @@ importers:
 
   packages/skills: {}
 
+  packages/station-protocol:
+    dependencies:
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+
+  packages/station-service:
+    dependencies:
+      '@play4m3/core':
+        specifier: workspace:*
+        version: link:../core
+      '@play4m3/guard':
+        specifier: workspace:*
+        version: link:../guard
+      '@play4m3/station-protocol':
+        specifier: workspace:*
+        version: link:../station-protocol
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+
   packages/voice: {}
 
 packages:

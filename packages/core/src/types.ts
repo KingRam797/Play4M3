@@ -56,7 +56,7 @@ export const CapabilitySchema = z
  * Tool families that always need a human click (brief §4.1 comment, S3).
  * A manifest that marks one of these approval:"none" is rejected at load time.
  */
-export const SENSITIVE_TOOL_PREFIXES = ["fs.write", "fs.delete", "fs.move", "exec.", "analysis.run", "net.", "skill.", "patch.export"] as const;
+export const SENSITIVE_TOOL_PREFIXES = ["fs.write", "fs.delete", "fs.move", "exec.", "analysis.run", "net.", "skill.", "patch.export", "patch.write"] as const;
 
 export function isSensitiveTool(tool: string): boolean {
   return SENSITIVE_TOOL_PREFIXES.some((p) => (p.endsWith(".") ? tool.startsWith(p) : tool === p || tool.startsWith(`${p}.`)));
