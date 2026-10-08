@@ -74,9 +74,15 @@ export function App({ api, brand }: Props) {
           )}
           <NewProjectForm key={view.projects.length > 0 ? "compact" : "first"} busy={busy} compact={view.projects.length > 0} onCreate={(name) => void run(() => api.createProject(name))} />
         </div>
-        <span className="demo-badge" title="Analysis, reader and planner are stand-ins until the real engines are connected.">
-          Demo data
-        </span>
+        {view.demo ? (
+          <span className="demo-badge" title="Sample game data. Analysis, reader and planner are stand-ins until the real engines are connected.">
+            Demo data
+          </span>
+        ) : (
+          <span className="demo-badge" title="Functions come from static analysis of your file. The reader and planner are still stand-ins.">
+            Demo reader
+          </span>
+        )}
       </header>
 
       <Notice notice={view.notice} failure={failure} />

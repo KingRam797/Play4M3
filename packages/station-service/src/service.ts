@@ -3,7 +3,7 @@
 // requests in STATION_REQUESTS. Model output never acts directly:
 //   user text -> planner (handles only, S1) -> guard (policy, taint) ->
 //   approval card -> native confirm dialog (outside the renderer) -> tool.
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { CapabilityManifest, HandleId, Json, ToolRequest } from "@play4m3/core";
@@ -16,8 +16,9 @@ import { DemoPlanner } from "./demo/planner.js";
 import type { Planner } from "./demo/planner.js";
 import { DemoReader, ReaderOutputSchema } from "./demo/reader.js";
 import type { Reader, ReaderOutput } from "./demo/reader.js";
-import { DEMO_FUNCTIONS, DEMO_GAME } from "./demo/sample.js";
 import type { AnalyzedFunction } from "./demo/sample.js";
+import { demoAnalysis } from "./analysis.js";
+import type { AnalysisSource, GameAnalysis } from "./analysis.js";
 import { ChangeRequestSchema, PatchError, PatchWriteArgsSchema, buildPatchFile, computeChanges } from "./patch.js";
 
 /** What the native confirm dialog shows. Built only from trusted or validated values, never raw game text. */
@@ -50,6 +51,7 @@ interface ProjectState {
   name: string;
   root: string;
   game: { title: string; sha256: string; sizeBytes: number };
+  source: AnalysisSource;
   functions: readonly AnalyzedFunction[];
   rawHandles: Map<string, HandleId>;
   explanations: Map<string, { handle: HandleId; output: ReaderOutput }>;
@@ -99,7 +101,8 @@ export class StationService {
     return this.view();
   }
 
-  createProject(rawName: string): ViewState {
+  /** Opens a project on the demo fixture, or on a real analysis the caller ran beforehand (F4). */
+  createProject(rawName: string, analysis: GameAnalysis = demoAnalysis()): ViewState {
     this.notice = null;
     if (!this.attested) return this.fail("Confirm that you own the game first.");
     const name = ProjectNameSchema.safeParse(rawName);
@@ -112,8 +115,9 @@ export class StationService {
       id,
       name: name.data,
       root,
-      game: { title: DEMO_GAME.title, sha256: createHash("sha256").update(DEMO_GAME.descriptor).digest("hex"), sizeBytes: DEMO_GAME.sizeBytes },
-      functions: DEMO_FUNCTIONS,
+      game: analysis.game,
+      source: analysis.source,
+      functions: analysis.functions,
       rawHandles: new Map(),
       explanations: new Map(),
       selectedFunctionId: null,
@@ -124,12 +128,13 @@ export class StationService {
     };
     // Raw analysis output is untrusted and goes behind handles straight away.
     for (const fn of project.functions) {
-      project.rawHandles.set(fn.id, handles.put({ value: fn as unknown as Json, trust: "untrusted", source: "decompiler:demo" }, "raw_text"));
+      project.rawHandles.set(fn.id, handles.put({ value: fn as unknown as Json, trust: "untrusted", source: `decompiler:${analysis.source}` }, "raw_text"));
     }
     this.projects.set(id, project);
     this.activeId = id;
-    this.audit.append("session", { event: "project_created", project: id });
-    this.say(project, "station", `Project ready. ${project.functions.length} functions found in the sample game. Pick one to see what it does.`);
+    this.audit.append("session", { event: "project_created", project: id, source: analysis.source, functions: project.functions.length });
+    const where = analysis.source === "demo" ? "the sample game" : "the game file (static analysis with Ghidra)";
+    this.say(project, "station", `Project ready. ${project.functions.length} functions found in ${where}. Pick one to see what it does.`);
     return this.view();
   }
 
@@ -271,14 +276,15 @@ export class StationService {
     const entries = this.audit.all();
     const chain = verifyChain(entries);
     const state: ViewState = {
-      demo: true,
+      // The badge says "Demo data" only while the fixture is shown.
+      demo: !p || p.source === "demo",
       attested: this.attested,
       projects: [...this.projects.values()].map((x) => ({ id: x.id, name: x.name })),
       project: p
         ? {
             id: p.id,
             name: p.name,
-            game: p.game,
+            game: { ...p.game, source: p.source },
             functions: p.functions.map((f) => ({ id: f.id, address: f.address, size: f.size, name: f.name, explained: p.explanations.has(f.id) })),
             selectedFunctionId: p.selectedFunctionId,
             explanation: (() => {

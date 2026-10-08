@@ -36,6 +36,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # Ubuntu 24.04 blocks unprivileged user namespaces; the analysis sandbox (S13) needs one
+      # for its network namespace and fails closed without it. Relax the host setting, as for Electron.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: pnpm test
       - run: pnpm scan:license
       - run: pnpm scan:secrets
@@ -66,6 +69,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      - name: S13 enforcement on Windows (measured, written to the job summary)
+        shell: bash
+        run: node -e "import('./packages/analysis/src/sandbox.ts').then((m) => console.log(JSON.stringify(m.sandboxEnforcement(), null, 2)))" | tee -a "$GITHUB_STEP_SUMMARY"
 
   electron-smoke-linux:
     name: hardened shell smoke test (S8 runtime)
@@ -115,6 +121,41 @@ jobs:
           name: station-walkthrough-screenshots
           path: ${{ runner.temp }}/station-shots
           if-no-files-found: warn
+
+  ghidra-analysis:
+    name: Ghidra analysis in the sandbox (F4, S13)
+    runs-on: ubuntu-24.04
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      GHIDRA_URL: https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+      GHIDRA_SHA256: ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Ghidra is never bundled (D-039): CI installs the pinned release, checked by sha256.
+      - name: Install Ghidra 12.1.4 (sha256 pinned)
+        run: |
+          curl -sSLf -o "$RUNNER_TEMP/ghidra.zip" "$GHIDRA_URL"
+          echo "$GHIDRA_SHA256  $RUNNER_TEMP/ghidra.zip" | sha256sum -c
+          unzip -q "$RUNNER_TEMP/ghidra.zip" -d "$RUNNER_TEMP"
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: S13 enforcement on Linux (written to the job summary)
+        run: node -e "import('./packages/analysis/src/sandbox.ts').then((m) => console.log(JSON.stringify(m.sandboxEnforcement(), null, 2)))" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Compile Sky Hopper, analyze it with Ghidra in the sandbox, patch it through the Station
+        env:
+          P4M3_REQUIRE_GHIDRA: "1"
+        run: |
+          # The runner image ships a Temurin 21 JDK; its path is in JAVA_HOME_21_X64.
+          export P4M3_JAVA_HOME="$JAVA_HOME_21_X64"
+          export P4M3_GHIDRA_DIR="$RUNNER_TEMP/ghidra_12.1.4_PUBLIC"
+          pnpm exec vitest run packages/analysis/test/ghidra.e2e.test.ts packages/station-service/test/real-analysis.test.ts --reporter=verbose
 
   gitleaks:
     name: secret scan (full history)

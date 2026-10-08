@@ -97,7 +97,14 @@ importers:
         specifier: 0.28.2
         version: 0.28.2
 
-  packages/analysis: {}
+  packages/analysis:
+    dependencies:
+      '@play4m3/skills':
+        specifier: workspace:*
+        version: link:../skills
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   packages/core:
     dependencies:
@@ -148,6 +155,9 @@ importers:
 
   packages/station-service:
     dependencies:
+      '@play4m3/analysis':
+        specifier: workspace:*
+        version: link:../analysis
       '@play4m3/core':
         specifier: workspace:*
         version: link:../core

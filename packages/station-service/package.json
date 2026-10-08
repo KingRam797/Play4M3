@@ -2,11 +2,14 @@
   "name": "@play4m3/station-service",
   "private": true,
   "version": "0.0.0",
-  "description": "Main-process station service: projects, guard-backed tool calls, approvals, audit; demo reader/planner until F7/F9",
+  "description": "Main-process station service: projects (demo fixture or real analysis), guard-backed tool calls, approvals, audit; demo reader/planner until F7/F9",
   "license": "UNLICENSED",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
+    "@play4m3/analysis": "workspace:*",
     "@play4m3/core": "workspace:*",
     "@play4m3/guard": "workspace:*",
     "@play4m3/station-protocol": "workspace:*",

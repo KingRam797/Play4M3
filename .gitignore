@@ -26,3 +26,6 @@ sbom*.json
 apps/desktop/renderer/boot.js
 packages/loading-screen/preview.html
 apps/desktop/renderer/station.css
+# compiled test programs (packages/analysis/testprog) are built in temp dirs; never commit one
+packages/analysis/testprog/*
+!packages/analysis/testprog/*.c

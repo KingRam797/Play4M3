@@ -104,14 +104,22 @@ export const AuditRowSchema = z
 
 export const ViewStateSchema = z
   .object({
-    demo: z.literal(true),
+    /** True while the project shows the built-in sample (fixture) data. */
+    demo: z.boolean(),
     attested: z.boolean(),
     projects: z.array(z.object({ id: Id, name: z.string().max(80) }).strict()).max(64),
     project: z
       .object({
         id: Id,
         name: z.string().max(80),
-        game: z.object({ title: z.string().max(80), sha256: z.string().regex(/^[0-9a-f]{64}$/), sizeBytes: z.number().int().nonnegative() }).strict(),
+        game: z
+          .object({
+            title: z.string().max(80),
+            sha256: z.string().regex(/^[0-9a-f]{64}$/),
+            sizeBytes: z.number().int().nonnegative(),
+            source: z.enum(["demo", "ghidra"]),
+          })
+          .strict(),
         functions: z.array(FunctionRowSchema).max(5000),
         selectedFunctionId: Id.nullable(),
         explanation: ExplanationSchema.nullable(),
