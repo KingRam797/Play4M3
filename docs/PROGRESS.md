@@ -1,6 +1,6 @@
 # Progress
 
-Updated 2026-10-06 (session 1). `[x]` = done and verified this session with command output seen. `[~]` = partly done. `[ ]` = not started. CI results are filled in once the first run on the PR completes.
+Updated 2026-10-08 (F4 session). `[x]` = done and verified this session with command output seen. `[~]` = partly done. `[ ]` = not started. CI results are filled in once the first run on the PR completes.
 
 ## Phase 0 (Oct 6–8): gate = spike result recorded, Partner Center started
 
@@ -21,7 +21,7 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 - [x] **F1** Repo, CI, license/secret/SBOM scans, SECURITY.md, THREAT_MODEL.md. Acceptance "CI green on a clean clone": CI run 37469750650 all green
 - [~] **F2** Guard core: Labeled types, policy engine, audit log, handles. S1, S2, S3 (guard level), S4, S14 tests pass locally. Remaining: trusted-label minting (Q-010), TOCTOU-safe executor (T-FS-1), audit sink to disk + anchor storage
 - [~] **F3** Red-team harness + corpus v1. Seed corpus (16 payloads, 8 carriers, 6 encodings) + obedient attacker run in tests. Remaining: grow corpus (Unicode smuggling variants, multi-turn sequences), metrics report in CI summary
-- [ ] **F4** Analysis sandbox + `ghidra-headless` skill on a test binary we compile ourselves (S13)
+- [~] **F4** Analysis sandbox + `ghidra-headless` skill on a test binary we compile ourselves (S13). Done: worker runner with enforced limits and an honest enforcement report (D-040..D-042), the sha256-pinned Ghidra post-script (D-043), the `p4m3-analysis/0` schema (D-044), the Sky Hopper C test program, Station projects on real analysis (patch at the real `jump_velocity` address). Real Ghidra 12.1.4 inside the sandbox passes locally (5/5 analysis e2e + Station e2e). CI job `ghidra-analysis`: result pending when this was written (see the session report). Remaining: filesystem confinement (D-041), Windows Job Object + network isolation (Q-012), desktop UI to pick a game file and locate Ghidra (with F8)
 - [x] **F5** Station UI shell: workspace, explain panel, approval queue (with before/after diff), activity log, first-run ownership attestation. Acceptance "walkthrough works with mock providers": Electron end-to-end walkthrough 14/14 checks pass locally (attest, open sample, explain, injection flagged, type a change, cancel in native dialog, approve, patch file on disk, no game symbols in patch or dialog, tamper check, no renderer errors). CI job `station-walkthrough` added (D-034..D-038)
 - [ ] **F6** Voice: push-to-talk, local STT, transcript confirm (S6, S7)
 - [ ] **F7** Explain-in-plain-language via quarantined reader
@@ -47,8 +47,8 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 | S9 | [~] headers configured in `vercel.json` + config test; live-header test against deployment NOT BUILT |
 | S10 | [~] redaction + patterns; Credential Manager not built |
 | S11 | [x] lockfile, pins, install-script allowlist, min release age, license gate, secret scan, gitleaks, pnpm audit, OSV, SBOM: all green in CI |
-| S12 | [ ] |
-| S13 | [ ] F4 spike |
+| S12 | [~] skill files sha256-pinned, mismatch refused, verified bytes staged (tests pass); manifest signing not built |
+| S13 | [~] Linux: no network, address-space cap, file-size cap, tree-kill timeout, scratch env, private read-only input + hash check, output caps, symlink refused (one test each, local + CI). Windows: timeout/env/output caps only, network + memory NOT ENFORCED, so analysis is refused (Q-012). Filesystem NOT CONFINED on any OS (D-041) |
 | S14 | [x] tests pass (local) |
 | S15 | [ ] optional |
 
@@ -65,6 +65,45 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 - [ ] **New:** paste the live Store Policies v7.20 sections (10.13.10, 10.2.2, 11.16, 10.5.1, 10.1.1) into `OPEN_QUESTIONS.md` Q-001, or allowlist `learn.microsoft.com` in the build environment's network policy
 
 ---
+
+## Session report: 2026-10-08 (F4 session)
+
+```
+DONE (with evidence, this session):
+- pnpm check (lint, typecheck, vitest, license scan, secret scan): exit 0; 329 tests passed, 9 skipped
+  (Windows-only tests + the real-Ghidra tests, which need P4M3_GHIDRA_DIR/P4M3_JAVA_HOME)
+- S13 limit tests (packages/analysis/test/s13-sandbox.test.ts), run locally on Linux as root:
+  env allowlist (no inherited secret), tree-kill timeout (grandchild never writes its marker),
+  memory cap (64 MiB ok, 2 GiB fails under a 1 GiB cap), loopback unreachable from the worker
+  (control: same stub connects without the sandbox), input copy change voids the run
+  (input_modified; root path), output file/dir/log caps, symlinked output refused, work dir removed
+- Ghidra 12.1.4 zip downloaded, sha256 ddac49f9…d4db verified, unzipped in the scratchpad
+- Real Ghidra in the sandbox on Sky Hopper (gcc -g -O0): ghidra.e2e.test.ts 5/5; Station end to end
+  (real-analysis.test.ts, incl. compile -> analyze -> explain -> approve -> patch at the real
+  jump_velocity address): 31/31 station-service tests passed with Ghidra enabled
+- Ghidra measured under RLIMIT_AS: fails at 2 and 3 GiB with default JVM/glibc settings,
+  passes at 2 GiB with the D-042 settings
+- Desktop bundle builds (pnpm --filter @play4m3/desktop build)
+- Pushed 256b91d to PR #1
+NOT RUN / NOT DONE:
+- CI results for 256b91d (incl. the new ghidra-analysis job and the Windows enforcement summary):
+  pending when this report was written
+- Electron walkthrough locally (needs a non-root user here; CI runs it)
+- Filesystem confinement for the worker (D-041); Windows Job Object + network isolation (Q-012)
+- Desktop UI to open a real game file / locate Ghidra
+- Read-only input via permission bits on Linux (only the root/hash-check path ran here; CI runs as non-root)
+BLOCKED-HUMAN: unchanged (see list above); new decision for King in Q-012 (native helper in the Store build?)
+VERIFY-FIRST resolved:
+- Ghidra 12.1.4 release asset name + sha256: github.com/NationalSecurityAgency/ghidra/releases/expanded_assets/Ghidra_12.1.4_build, 2026-10-08
+NEXT 3 ACTIONS:
+1. Windows S13: Job Object + network isolation spike in CI (Q-012)
+2. Filesystem confinement (Landlock or mount namespace, tested in CI) (D-041)
+3. F8: desktop "open game file" + Ghidra location, then the full mod flow and export
+RISKS TO 10/30:
+- Real analysis on Windows (the Store target) is blocked until Q-012 is solved
+- Stripped real games give no typed globals, so no tunables without the F7 reader
+- Schedule: F6-F9 + F12 in the remaining time is tight; cut order per brief §7
+```
 
 ## Session report: 2026-10-06 (session 1)
 

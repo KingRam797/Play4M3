@@ -1,69 +1,56 @@
-# Session handoff (2026-10-08)
+# Session handoff (2026-10-08, after F4)
 
-Notes for the next session. Read `CLAUDE.md` first, then this file, then `docs/PROGRESS.md`. Delete or rewrite this file when it goes stale.
+Notes for the next session. Read `CLAUDE.md` first, then this file, then `docs/PROGRESS.md` (the newest session report is at the top of the reports). Delete or rewrite this file when it goes stale.
 
 ## Where things stand
 
-- Branch `claude/creation-station-kit-lkqr9k`, head `1f69fc1`. Draft PR https://github.com/KingRam797/Play4M3/pull/1 targets `main` (the default branch, confirmed). All CI was green on `1f69fc1`: `ci` (check, test-windows, electron-smoke-linux, station-walkthrough, gitleaks, osv, sbom), `windows-msix-spike` and Vercel.
-- Done: Phase 0, the destructible loading screen (D-032), and **F5** Station screens (D-034..D-038). `pnpm check` gives 274 tests passing and 2 skipped (Windows-only junction tests).
-- Last IDs used: **D-038** in DECISIONS, **Q-011** in OPEN_QUESTIONS.
-- Plan agreed with King: step one = F5 (done), **step two = F4 (start now)**, step three = F8 (full mod flow + export).
+- Branch `claude/creation-station-kit-lkqr9k`. Draft PR https://github.com/KingRam797/Play4M3/pull/1 targets `main`. CI status for the latest head is in the session report in `PROGRESS.md`.
+- Done: Phase 0, loading screen (D-032), F5 Station screens (D-034..D-038), and most of **F4** (D-039..D-044): analysis worker sandbox, `ghidra-headless` skill, Sky Hopper test program, and Station projects on real analysis output.
+- Last IDs used: **D-044** in DECISIONS, **Q-012** in OPEN_QUESTIONS, **T-AN-5** in THREAT_MODEL.
+- Plan agreed with King: step one = F5 (done), step two = F4 (mostly done, gaps below), **step three = F8** (full mod flow + export).
 
-## Step two: F4 analysis sandbox + `ghidra-headless` skill (S13)
+## F4: what exists
 
-Nothing has been written yet. `packages/analysis` and `packages/skills` are placeholders (`export const PACKAGE = ...`).
+- `packages/analysis/src/sandbox.ts`: `runSandboxed()` and `sandboxEnforcement()`. Linux: `prlimit` (AS, FSIZE, core 0), then `unshare --map-current-user --net --pid --fork --kill-child`. On every OS: process-group or `taskkill` tree kill, a scratch environment, a private `0700` work dir, the input copied as `input.bin` (read-only, hash re-checked), output read with `O_NOFOLLOW`, and size caps. By default it **fails closed** unless network isolation and a memory cap are both enforced.
+- `packages/analysis/src/ghidra.ts`: `checkGhidraInstall()` (version must be 12.1.4) and `analyzeWithGhidra()`. It starts `java` directly with Ghidra's `launch.properties` VM arguments and JVM flags that fit under RLIMIT_AS (D-042).
+- `packages/skills`: the `GHIDRA_HEADLESS` manifest; `ghidra-headless/P4m3ExportFunctions.java` is pinned by sha256. **If you edit the Java script, update the pin** (`sha256sum packages/skills/ghidra-headless/P4m3ExportFunctions.java`).
+- `packages/analysis/src/schema.ts`: the strict `p4m3-analysis/0` schema.
+- `packages/analysis/testprog/sky_hopper.c` and `src/testprog.ts` (`buildTestProgram`, gcc `-g -O0 -no-pie`). Binaries go only to temp dirs.
+- `packages/station-service/src/analysis.ts`: `analysisFromReport()` and `demoAnalysis()`. `StationService.createProject(name, analysis?)` takes either; the "Demo data" badge appears only for the fixture.
+- CI: the `ghidra-analysis` job downloads the pinned zip, relaxes the userns sysctl, and runs `ghidra.e2e.test.ts` and `real-analysis.test.ts` with `P4M3_REQUIRE_GHIDRA=1`. The `check` job also relaxes the sysctl (the S13 tests need user namespaces). The Windows job writes the measured enforcement to its job summary.
 
-Goal: a real function list from a binary we compile ourselves feeds the explain panel, in place of the `DEMO_FUNCTIONS` fixture.
+## F4 gaps (do these before or alongside F8)
 
-1. **Test program.** Write a small C "Sky Hopper" program that mirrors `packages/station-service/src/demo/sample.ts`.
-   - Functions: `main`, `game_tick`, `read_input`, `player_jump`, `apply_gravity`, `move_player`, `render_frame`, `load_level` (holds the planted injection string), `play_sound`.
-   - Globals: `jump_velocity` 12.0, `gravity` 9.8, `run_speed` 4.5. The fixture's addresses are 0x404010/14/18; real addresses will differ, so take them from the analysis.
-   - Compile it in tests and CI. **Never commit the binary** (add the output dir to `.gitignore`).
-2. **Worker runner** in `packages/analysis`.
-   - Spawn the analyzer as a separate process, with a minimal environment, and pass no secrets.
-   - Network: none. On Linux use `unshare -n` or equivalent; on Windows, measure what's possible.
-   - Input: read-only. Copy the input into a temp dir and mark it read-only.
-   - Caps: wall-clock timeout with kill, memory cap (`prlimit` on Linux, a job object on Windows), and an output size cap.
-   - Output is `untrusted`. Parse it with Zod into bounded fields only, then store it as handles; never let it reach the planner (S1).
-   - Write one test per enforced limit, and document in `SECURITY.md` what is *actually* enforced on each OS (the brief requires honest reporting).
-3. **ghidra-headless skill.**
-   - Ghidra 12.1.4: Apache-2.0, JDK 21+, Python 3.9–3.14 (VERIFY-FIRST already logged).
-   - It is user-installed or CI-installed, **never bundled**.
-   - Run `analyzeHeadless` with `-import <bin> -scriptPath <ours> -postScript <ours> -deleteProject` and a throwaway project dir.
-   - The post-script emits normalized JSON: functions with entry address, size, name, referenced strings, and data refs. Validate it with Zod.
-4. **Wire into the Station.**
-   - `StationService` gets an analysis source: the demo fixture or real analysis output.
-   - The reader still classifies functions and flags instruction-like strings.
-   - Keep the "Demo data" badge only for the fixture.
-5. **CI job.** Install JDK 21 + Ghidra 12.1.4 (zip pinned by sha256), compile the test program, run the skill, and assert the expected functions and globals appear. Add a Windows variant for the S13 measurements.
-6. **Docs.** New D-039+ entries, update PROGRESS (F4, S13), SECURITY (S13 row), THREAT_MODEL (worker threats).
+1. **Windows S13 (Q-012).** Today analysis is refused on Windows. That needs a Job Object (memory, kill-on-close, process limit) and network isolation (AppContainer or WFP). Decide native helper vs. PowerShell/C# P/Invoke; measure in CI.
+2. **Filesystem confinement (D-041).** Landlock or a mount namespace, so the worker can write only its output and scratch dirs. A mount-namespace remount experiment was refused by this container's permission policy, so try Landlock or test it in CI.
+3. **Desktop wiring.** No UI yet to choose a game file or point at a Ghidra install. Add a main-process "Open game file" flow (native file dialog, path never from the renderer), a Ghidra/JDK location setting, and progress/cancel for a run of up to 5 minutes. Then `createProject(name, analysisFromReport(...))`.
+4. Real games are usually stripped. Without DWARF, globals come back as `undefined4` with no value, so there are no tunables. The F7 reader (or a typed-data heuristic) has to handle that.
 
 ## Environment facts (this container)
 
-- Available: gcc, clang, Java 21 (OpenJDK 21.0.12), python3, `unshare`, `prlimit`. Ghidra is **not** installed.
-- Network goes through a proxy. `raw.githubusercontent.com` works (200). `github.com` release pages return **403**, so the Ghidra release zip likely can't be downloaded here; run Ghidra in GitHub Actions and build the runner and limits locally with a stub analyzer.
-- Running Electron as root fails. Use a non-root user (`useradd smoke; su smoke`) with a `mktemp -d` dir that user owns, under `xvfb-run`. The smoke user can't write to the scratchpad, so copy results out afterwards.
-- Enable the pre-commit hook once per clone with `git config core.hooksPath .githooks`. It runs `pnpm check` and blocks a failing commit. Never commit around it.
-- Dependency pins: the 3-day minimum release age rejects very new versions (pick an older patch). The license gate fails on GPL/AGPL; any exception needs a pinned entry in `scripts/license-exceptions.json` plus a DECISIONS entry.
+- gcc, clang, Java 21 (`/usr/lib/jvm/java-21-openjdk-amd64`), python3, `unshare`, `prlimit` are available. **Ghidra downloads work now** (the github.com release asset returned 200 through the proxy on 2026-10-08). Download it into the scratchpad and run the gated tests with `P4M3_GHIDRA_DIR=<dir>/ghidra_12.1.4_PUBLIC P4M3_JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64`.
+- The container runs as root, so the read-only input test exercises the hash-check path (root ignores mode bits). CI runs as a normal user and exercises the permission path.
+- The container's `JAVA_TOOL_OPTIONS` (proxy settings) is not passed to the worker; that is the environment allowlist working.
+- Running Electron as root fails. Use a non-root user (`useradd smoke; su smoke`) under `xvfb-run`.
+- Enable the pre-commit hook once per clone: `git config core.hooksPath .githooks`.
+- Dependency pins: the 3-day minimum release age rejects very new versions. The license gate fails on GPL/AGPL.
 
 ## Rules that must keep holding
 
-- Static analysis only; never execute a user binary on the host. No uploads, no binary analysis on the web build.
-- Never ship game code/assets or decompiled output; no DRM/anti-tamper circumvention.
-- No GPL/AGPL bundling or linking (AssetRipper, Il2CppInspector, Blender).
-- Untrusted text never reaches the planner. Tainted requests need approval and never choose a network host.
-- No "injection-proof", "unhackable" or "guaranteed safe" in copy. Write `NOT RUN` for anything not run this session.
+- Static analysis only. Never execute a user binary on the host (the test program is compiled, never run). No uploads, and no binary analysis on the web build.
+- Never ship game code or assets, or decompiled output. The analysis report carries names, addresses, strings and globals only. No DRM circumvention.
+- No GPL/AGPL bundling. Ghidra is Apache-2.0 and is user-installed, never bundled.
+- Untrusted text never reaches the planner. Analyzer output goes behind handles.
+- No "injection-proof", "unhackable" or "guaranteed safe" in copy. Write `NOT RUN` for anything not run this session, and report sandbox limits as they are actually enforced.
 
 ## Open items carried over
 
-- 2 optional WACK failures ("App resources", "Blocked executables"), root cause unknown.
-- Store policy v7.20 text unverified (Q-001); learn.microsoft.com is blocked here.
-- Live Vercel header check NOT RUN (vercel.app blocked here).
-- Physical Xbox controller test NOT RUN.
-- Station projects are not persisted across restarts (only the attestation is).
-- King may send a "remake everything" GitHub repo for cloning/mod logic. Before using any of it, check its license (no GPL/AGPL linking) and approach (no shipping game code/assets, no DRM circumvention).
+- 2 optional WACK failures ("App resources", "Blocked executables"); root cause unknown.
+- Store policy v7.20 text unverified (Q-001). Live Vercel header check NOT RUN. Physical Xbox controller test NOT RUN.
+- Station projects are not persisted across restarts.
+- King may send a "remake everything" GitHub repo. Check its license and approach before using any of it.
 - BLOCKED-HUMAN list is in `PROGRESS.md`; the Partner Center account is the most time-critical.
 
 ## PR duties
 
-Keep PR #1 green and mergeable: subscribe to its activity in the new session, fix CI failures, and answer review comments. End the session with the §10 report in `PROGRESS.md`.
+Keep PR #1 green and mergeable: subscribe to its activity, fix CI failures, answer review comments. End the session with the §10 report in `PROGRESS.md`.
