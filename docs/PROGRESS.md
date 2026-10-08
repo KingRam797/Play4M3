@@ -22,7 +22,7 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 - [~] **F2** Guard core: Labeled types, policy engine, audit log, handles. S1, S2, S3 (guard level), S4, S14 tests pass locally. Remaining: trusted-label minting (Q-010), TOCTOU-safe executor (T-FS-1), audit sink to disk + anchor storage
 - [~] **F3** Red-team harness + corpus v1. Seed corpus (16 payloads, 8 carriers, 6 encodings) + obedient attacker run in tests. Remaining: grow corpus (Unicode smuggling variants, multi-turn sequences), metrics report in CI summary
 - [ ] **F4** Analysis sandbox + `ghidra-headless` skill on a test binary we compile ourselves (S13)
-- [ ] **F5** Station UI shell: workspace, explain panel, approval queue, audit view
+- [x] **F5** Station UI shell: workspace, explain panel, approval queue (with before/after diff), activity log, first-run ownership attestation. Acceptance "walkthrough works with mock providers": Electron end-to-end walkthrough 14/14 checks pass locally (attest, open sample, explain, injection flagged, type a change, cancel in native dialog, approve, patch file on disk, no game symbols in patch or dialog, tamper check, no renderer errors). CI job `station-walkthrough` added (D-034..D-038)
 - [ ] **F6** Voice: push-to-talk, local STT, transcript confirm (S6, S7)
 - [ ] **F7** Explain-in-plain-language via quarantined reader
 - [ ] **F8** Propose-a-mod: patch diff, review, approve, export with original-hash manifest
@@ -38,7 +38,7 @@ Updated 2026-10-06 (session 1). `[x]` = done and verified this session with comm
 |---|---|
 | S1 | [x] tests pass (local) |
 | S2 | [x] tests pass on Linux and Windows CI (junctions included) |
-| S3 | [~] guard-level tests pass; UI click path pending F5 |
+| S3 | [x] guard-level tests + UI path: approval only through the native main-process dialog (walkthrough checks cancel and approve) |
 | S4 | [x] 106 attempts, 0 unauthorized executions, with positive control (local) |
 | S5 | [ ] needs F9 + keys |
 | S6 | [ ] F6 |

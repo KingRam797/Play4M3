@@ -1,6 +1,7 @@
 // S8: every IPC message is Zod-validated and sender-checked. The channel list
 // is closed; anything else is dropped. Handlers never receive raw renderer input.
 import { z } from "zod";
+import { STATION_REQUESTS, ViewStateSchema } from "@play4m3/station-protocol";
 import { isAppUrl } from "./security.js";
 
 export const IPC_CHANNELS = {
@@ -12,6 +13,13 @@ export const IPC_CHANNELS = {
     request: z.object({}).strict(),
     response: z.object({ name: z.string(), stationName: z.string() }).strict(),
   },
+  "station:state": { request: STATION_REQUESTS["station:state"], response: ViewStateSchema },
+  "station:attest": { request: STATION_REQUESTS["station:attest"], response: ViewStateSchema },
+  "station:project.create": { request: STATION_REQUESTS["station:project.create"], response: ViewStateSchema },
+  "station:project.select": { request: STATION_REQUESTS["station:project.select"], response: ViewStateSchema },
+  "station:function.select": { request: STATION_REQUESTS["station:function.select"], response: ViewStateSchema },
+  "station:command": { request: STATION_REQUESTS["station:command"], response: ViewStateSchema },
+  "station:approval.decide": { request: STATION_REQUESTS["station:approval.decide"], response: ViewStateSchema },
 } as const;
 
 export type Channel = keyof typeof IPC_CHANNELS;

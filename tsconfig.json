@@ -14,6 +14,7 @@
     "packages/loading-screen/src/engine.ts",
     "packages/loading-screen/src/index.ts",
     "apps/desktop/src/renderer/**",
-    "apps/web/src/**"
+    "apps/web/src/**",
+    "apps/station/src/**"
   ]
 }

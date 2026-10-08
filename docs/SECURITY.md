@@ -14,7 +14,7 @@ Status as of 2026-10-06. "Passes" means the test ran and passed, both locally an
 |---|---|---|
 | S1 | Planner input is built only from user-labeled text and handle descriptors; untrusted text, including attacker-chosen filenames, never enters it | Canary tests pass |
 | S2 | Default-deny policy engine; hostile path forms rejected (traversal, absolute, drive, UNC, device namespace, ADS, 8.3 short names, reserved names, trailing dot/space, control/invisible chars, non-NFC, symlinks, junctions, hard-link writes) | Tests pass on Linux and Windows; NTFS junction tests pass on `windows-latest` |
-| S3 | Sensitive and untrusted-derived calls wait for a user approval bound to the exact request (single use, expiring) | Guard-level tests pass; UI click path NOT RUN (UI arrives in F5) |
+| S3 | Sensitive and untrusted-derived calls wait for a user approval bound to the exact request (single use, expiring), confirmed in a native dialog the page cannot click for you | Guard-level tests pass; Electron walkthrough passes (cancel keeps it waiting, approve writes the patch, dialog shows no game text) |
 | S4 | Obedient-attacker planner, 106 attempts across 9 categories | **0 executions, 0 unauthorized**; 100 denied, 6 left waiting for a human (4 of them unflagged, see Red-team results); positive control passes |
 | S8 | Electron hardening (see checklist below) | Config audit test passes; runtime smoke passes on Linux (sandboxed, renderer has no `require`/`process`) and on Windows (unpacked packaged app, exit 0). WACK: overall PASS, 2 optional tests FAIL (D-029) |
 | S10 | Secret patterns redacted from audit log | Redaction test passes; Credential Manager storage NOT BUILT |
@@ -34,7 +34,7 @@ Automated (apps/desktop/test/s8-config-audit.test.ts):
 - [x] Permission handlers deny everything except audio-only microphone, for the app main frame, while push-to-talk is held
 - [x] Device, display-media and HID/serial/USB permissions denied
 - [x] IPC: closed channel list, Zod-validated payloads, sender must be the app main frame
-- [x] Preload exposes a frozen two-function API, never `ipcRenderer`
+- [x] Preload exposes a frozen API with one method per declared channel, never `ipcRenderer`; main handles exactly those channels
 - [x] Fuses: runAsNode off, NODE_OPTIONS off, inspect args off, asar integrity on, only load from asar
 - [x] MSIX capabilities limited to `runFullTrust` + `microphone`
 

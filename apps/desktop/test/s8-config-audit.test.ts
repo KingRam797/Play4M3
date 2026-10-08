@@ -196,3 +196,40 @@ describe("S8 packaging (electron-builder.yml)", () => {
     expect(yml).toContain('"!**/*.map"');
   });
 });
+
+describe("S8 station IPC", () => {
+  const appUrl = "app://station/index.html";
+
+  it("every channel the preload invokes is a declared, validated channel", () => {
+    const preload = readFileSync(new URL("../src/preload.ts", import.meta.url), "utf8");
+    const used = [...preload.matchAll(/ipcRenderer\.invoke\("([^"]+)"/g)].map((m) => m[1]);
+    expect(used.length).toBeGreaterThanOrEqual(9);
+    for (const c of used) expect(isChannel(c), c).toBe(true);
+  });
+
+  it("main registers a handler for every declared channel and nothing else", () => {
+    const main = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
+    const handled = [...main.matchAll(/handle\("([^"]+)"/g)].map((m) => m[1]).sort();
+    const preload = readFileSync(new URL("../src/preload.ts", import.meta.url), "utf8");
+    const used = [...preload.matchAll(/ipcRenderer\.invoke\("([^"]+)"/g)].map((m) => m[1]).sort();
+    expect(handled).toEqual(used);
+    expect(main).not.toMatch(/ipcMain\.on\(/);
+  });
+
+  it.each([
+    ["station:attest", { accepted: false }],
+    ["station:project.create", { name: "../../x" }],
+    ["station:command", { text: "x".repeat(501) }],
+    ["station:approval.decide", { requestId: "req_1", decision: "approve", approvalToken: "forged" }],
+    ["station:function.select", { id: "fn 1; rm" }],
+  ] as const)("rejects bad %s payload", (channel, payload) => {
+    expect(checkIpc(channel, appUrl, true, payload).ok).toBe(false);
+  });
+
+  it("main confirms approvals in a native dialog, outside the renderer", () => {
+    const main = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
+    expect(main).toMatch(/dialog\.showMessageBox\(win,/);
+    expect(main).toMatch(/cancelId: 0/);
+    expect(main).toMatch(/defaultId: 0/); // Enter on the dialog cancels; approving needs a deliberate choice
+  });
+});

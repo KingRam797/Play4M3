@@ -18,8 +18,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ["packages/loading-screen/src/**/*.ts", "packages/loading-screen/preview/**/*.ts", "apps/desktop/src/renderer/**/*.ts", "apps/web/src/**/*.ts"],
+    files: ["packages/loading-screen/src/**/*.ts", "packages/loading-screen/preview/**/*.ts", "apps/desktop/src/renderer/**/*.ts", "apps/web/src/**/*.ts", "apps/station/src/**/*.{ts,tsx}"],
     languageOptions: { globals: { ...globals.browser } },
+  },
+  {
+    // End-to-end scripts run in Node but pass callbacks that execute in the page.
+    files: ["apps/*/e2e/**/*.mjs"],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
     files: ["apps/*/renderer/**/*.js"],

@@ -1,10 +1,14 @@
-// Electron main process: Phase 0 hardened hello-world shell (S8) and MSIX spike.
+// Electron main process: hardened shell (S8) hosting the Creation Station.
 // All security values come from ./security.ts; the S8 audit test scans this file.
+// All station state and side effects live here (StationService); the renderer
+// only renders view state. Approvals are confirmed in a native dialog, outside
+// the renderer, so a compromised page cannot approve anything by itself.
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { BrowserWindow, app, ipcMain, protocol, session } from "electron";
+import { BrowserWindow, app, dialog, ipcMain, protocol, session } from "electron";
 import type { IpcMainInvokeEvent, WebContents } from "electron";
 import { BRAND, canonicalizeRelative } from "@play4m3/core";
+import { StationService } from "@play4m3/station-service";
 import { IPC_CHANNELS, checkIpc } from "./ipc.js";
 import type { Channel, IpcRequest, IpcResponse } from "./ipc.js";
 import {
@@ -24,6 +28,10 @@ import {
 const RENDERER_DIR = path.join(__dirname, "..", "renderer");
 const MIME: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png" };
 const mic = new MicGate();
+
+// Test and CI runs point this at a throwaway folder; normal runs use the OS default.
+const userDataOverride = process.env["P4M3_USER_DATA_DIR"];
+if (userDataOverride) app.setPath("userData", userDataOverride);
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
@@ -67,12 +75,12 @@ function lockDownContents(contents: WebContents): void {
   });
 }
 
-function handle<C extends Channel>(channel: C, fn: (req: IpcRequest<C>) => IpcResponse<C>): void {
-  ipcMain.handle(channel, (event: IpcMainInvokeEvent, payload: unknown) => {
+function handle<C extends Channel>(channel: C, fn: (req: IpcRequest<C>) => IpcResponse<C> | Promise<IpcResponse<C>>): void {
+  ipcMain.handle(channel, async (event: IpcMainInvokeEvent, payload: unknown) => {
     const frame = event.senderFrame;
     const check = checkIpc(channel, frame?.url ?? "", frame !== null && frame === event.sender.mainFrame, payload);
     if (!check.ok) throw new Error("rejected");
-    return IPC_CHANNELS[channel].response.parse(fn(check.value));
+    return IPC_CHANNELS[channel].response.parse(await fn(check.value));
   });
 }
 
@@ -92,34 +100,57 @@ app.whenReady().then(() => {
   ses.setDisplayMediaRequestHandler((_req, callback) => callback({}));
   ses.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !allowRequest(details.url) }));
 
-  handle("station:ping", (req) => ({ pong: req.nonce, version: app.getVersion() }));
-  handle("station:brand", () => ({ name: BRAND.name, stationName: BRAND.stationName }));
-
   const win = new BrowserWindow({
-    width: 1100,
-    height: 720,
+    width: 1280,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
     title: BRAND.stationName,
     show: false,
     webPreferences: { ...WEB_PREFERENCES, preload: path.join(__dirname, "preload.cjs") },
   });
   win.removeMenu();
+
+  const station = new StationService({
+    workspaceRoot: path.join(app.getPath("userData"), "workspaces"),
+    attestationFile: path.join(app.getPath("userData"), "attestation.json"),
+    confirm: async (p) => {
+      const r = await dialog.showMessageBox(win, { type: "warning", title: p.title, message: p.message, detail: p.detail, buttons: ["Cancel", "Approve"], defaultId: 0, cancelId: 0, noLink: true });
+      return r.response === 1;
+    },
+  });
+  handle("station:ping", (req) => ({ pong: req.nonce, version: app.getVersion() }));
+  handle("station:brand", () => ({ name: BRAND.name, stationName: BRAND.stationName }));
+  handle("station:state", () => station.state());
+  handle("station:attest", () => station.attest());
+  handle("station:project.create", (req) => station.createProject(req.name));
+  handle("station:project.select", (req) => station.selectProject(req.id));
+  handle("station:function.select", (req) => station.selectFunction(req.id));
+  handle("station:command", (req) => station.command(req.text));
+  handle("station:approval.decide", (req) => station.decide(req.requestId, req.decision));
   win.once("ready-to-show", () => win.show());
   void win.loadURL(`${APP_ORIGIN}/index.html`);
 
-  // CI smoke test: report what the renderer's bridge check shows, then quit.
-  // Reads a few values from the page; grants nothing.
+  // CI smoke test: check the bridge and the loading screen, then press Enter
+  // (a real input event sent from the main process) and check the Station
+  // mounted. Reads a few values from the page; grants nothing.
   if (process.env["P4M3_SMOKE"] === "1") {
+    const read = (js: string): Promise<string> => win.webContents.executeJavaScript(js, false).then((v: unknown) => String(v));
     win.webContents.once("did-finish-load", () => {
       setTimeout(() => {
-        void win.webContents
-          .executeJavaScript("[document.getElementById('ping').textContent, typeof require, typeof process, typeof window.station.ping, document.body.dataset.loading].join('|')", false)
-          .then((result: unknown) => {
-            const [ping, req, proc, bridge, loading] = String(result).split("|");
-            console.log(`SMOKE ping=${ping} require=${req} process=${proc} bridge=${bridge} loading=${loading}`);
-            // "ready" = loading finished and the loading screen is still up, waiting for the continue button.
-            const ok = ping === `ok (v${app.getVersion()})` && req === "undefined" && proc === "undefined" && bridge === "function" && loading === "ready";
-            app.exit(ok ? 0 : 1);
-          });
+        void (async () => {
+          const [ping, req, proc, bridge, loading] = (
+            await read("[document.getElementById('ping').textContent, typeof require, typeof process, typeof window.station.ping, document.body.dataset.loading].join('|')")
+          ).split("|");
+          win.webContents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+          win.webContents.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+          await new Promise((r) => setTimeout(r, 1200));
+          const mounted = await read("document.querySelector('[data-station-root]')?.getAttribute('data-station-root') ?? 'none'");
+          console.log(`SMOKE ping=${ping} require=${req} process=${proc} bridge=${bridge} loading=${loading} station=${mounted}`);
+          // "ready" = loading finished and the screen waited for the continue button; then the Station mounted.
+          const ok = ping === `ok (v${app.getVersion()})` && req === "undefined" && proc === "undefined" && bridge === "function" && loading === "ready" && (mounted === "attest" || mounted === "workspace");
+          app.exit(ok ? 0 : 1);
+        })();
       }, 1500);
     });
   }

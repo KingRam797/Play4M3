@@ -6,15 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Play4M3</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="station.css" />
   </head>
   <body data-loading="loading">
     <canvas id="stage" aria-label="Loading screen. Fly and shoot the screen apart while the app loads." role="img"></canvas>
     <div id="live" class="sr-only" aria-live="polite"></div>
-    <main id="app" hidden>
-      <h1 id="title">The Creation Station</h1>
-      <p>Phase 0 shell. Hardened, offline, no binary analysis yet.</p>
-      <p>Bridge check: <output id="ping">not run</output></p>
-    </main>
+    <div id="station-root" hidden></div>
+    <p class="sr-only">Bridge check: <output id="ping">not run</output></p>
     <script src="boot.js"></script>
   </body>
 </html>

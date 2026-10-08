@@ -7,12 +7,15 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "types": []
+    "types": [],
+    "jsx": "react-jsx"
   },
   "include": [
     "packages/loading-screen/src/**/*.ts",
     "apps/desktop/src/renderer/**/*.ts",
     "packages/loading-screen/preview/**/*.ts",
-    "apps/web/src/**/*.ts"
+    "apps/web/src/**/*.ts",
+    "apps/station/src/**/*.ts",
+    "apps/station/src/**/*.tsx"
   ]
 }
