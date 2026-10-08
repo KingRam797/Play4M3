@@ -21,7 +21,7 @@ Updated 2026-10-08 (F4 session). `[x]` = done and verified this session with com
 - [x] **F1** Repo, CI, license/secret/SBOM scans, SECURITY.md, THREAT_MODEL.md. Acceptance "CI green on a clean clone": CI run 37469750650 all green
 - [~] **F2** Guard core: Labeled types, policy engine, audit log, handles. S1, S2, S3 (guard level), S4, S14 tests pass locally. Remaining: trusted-label minting (Q-010), TOCTOU-safe executor (T-FS-1), audit sink to disk + anchor storage
 - [~] **F3** Red-team harness + corpus v1. Seed corpus (16 payloads, 8 carriers, 6 encodings) + obedient attacker run in tests. Remaining: grow corpus (Unicode smuggling variants, multi-turn sequences), metrics report in CI summary
-- [~] **F4** Analysis sandbox + `ghidra-headless` skill on a test binary we compile ourselves (S13). Done: worker runner with enforced limits and an honest enforcement report (D-040..D-042), the sha256-pinned Ghidra post-script (D-043), the `p4m3-analysis/0` schema (D-044), the Sky Hopper C test program, Station projects on real analysis (patch at the real `jump_velocity` address). Real Ghidra 12.1.4 inside the sandbox passes locally (5/5 analysis e2e + Station e2e). CI job `ghidra-analysis`: result pending when this was written (see the session report). Remaining: filesystem confinement (D-041), Windows Job Object + network isolation (Q-012), desktop UI to pick a game file and locate Ghidra (with F8)
+- [~] **F4** Analysis sandbox + `ghidra-headless` skill on a test binary we compile ourselves (S13). Done: worker runner with enforced limits and an honest enforcement report (D-040..D-042), the sha256-pinned Ghidra post-script (D-043), the `p4m3-analysis/0` schema (D-044), the Sky Hopper C test program, Station projects on real analysis (patch at the real `jump_velocity` address). Real Ghidra 12.1.4 inside the sandbox passes locally (5/5 analysis e2e + Station e2e) and in CI job `ghidra-analysis` (runs 37780642515, 37780648486 on 522434b). Remaining: filesystem confinement (D-041), Windows Job Object + network isolation (Q-012), desktop UI to pick a game file and locate Ghidra (with F8)
 - [x] **F5** Station UI shell: workspace, explain panel, approval queue (with before/after diff), activity log, first-run ownership attestation. Acceptance "walkthrough works with mock providers": Electron end-to-end walkthrough 14/14 checks pass locally (attest, open sample, explain, injection flagged, type a change, cancel in native dialog, approve, patch file on disk, no game symbols in patch or dialog, tamper check, no renderer errors). CI job `station-walkthrough` added (D-034..D-038)
 - [ ] **F6** Voice: push-to-talk, local STT, transcript confirm (S6, S7)
 - [ ] **F7** Explain-in-plain-language via quarantined reader
@@ -84,10 +84,14 @@ DONE (with evidence, this session):
 - Ghidra measured under RLIMIT_AS: fails at 2 and 3 GiB with default JVM/glibc settings,
   passes at 2 GiB with the D-042 settings
 - Desktop bundle builds (pnpm --filter @play4m3/desktop build)
-- Pushed 256b91d to PR #1
+- CI on 522434b all green (runs 37780642515, 37780648486, MSIX 37780642542): check (Linux, as non-root:
+  S13 permission path), Windows tests 325 passed / 13 skipped, ghidra-analysis (real Ghidra, both
+  e2e files), walkthrough, smoke, gitleaks, OSV, SBOM, msix
+- Windows enforcement measured in CI: network none, memory none, fileSize none; timeout tree-kill,
+  env allowlist, output host check, read-only input attribute -> analysis refused by default (Q-012)
+- Fixed two CI failures found on 256b91d: Ghidra's shared /var/tmp cache collided between concurrent
+  runs (now per-run, D-042); libuv adds fixed Windows env vars to children (now listed, D-040)
 NOT RUN / NOT DONE:
-- CI results for 256b91d (incl. the new ghidra-analysis job and the Windows enforcement summary):
-  pending when this report was written
 - Electron walkthrough locally (needs a non-root user here; CI runs it)
 - Filesystem confinement for the worker (D-041); Windows Job Object + network isolation (Q-012)
 - Desktop UI to open a real game file / locate Ghidra
