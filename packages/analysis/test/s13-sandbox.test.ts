@@ -66,9 +66,14 @@ describe("environment", () => {
       const out = json(await stub("env"));
       const keys = out["keys"] as string[];
       expect(keys).not.toContain("P4M3_FAKE_SECRET");
-      const allowed = win ? ["PATH", "SystemRoot", "TEMP", "TMP", "USERPROFILE"] : ["HOME", "LANG", "PATH", "TMPDIR"];
-      // Windows adds a few per-process variables of its own (e.g. =C:); ignore those.
-      expect(keys.filter((k) => !k.startsWith("=")).every((k) => allowed.some((a) => a.toLowerCase() === k.toLowerCase()))).toBe(true);
+      const ours = win ? ["PATH", "SystemRoot", "TEMP", "TMP", "USERPROFILE"] : ["HOME", "LANG", "PATH", "TMPDIR"];
+      // On Windows, libuv copies these from the parent when the child's env lacks them
+      // (required for many Windows programs). Measured on windows-latest; none are secrets.
+      const libuvWindows = ["HOMEDRIVE", "HOMEPATH", "LOGONSERVER", "SYSTEMDRIVE", "SYSTEMROOT", "TEMP", "USERDOMAIN", "USERNAME", "USERPROFILE", "WINDIR"];
+      const allowed = win ? [...ours, ...libuvWindows] : ours;
+      // Windows also adds per-drive variables of its own (e.g. =C:); ignore those.
+      const unexpected = keys.filter((k) => !k.startsWith("=") && !allowed.some((a) => a.toLowerCase() === k.toLowerCase()));
+      expect(unexpected).toEqual([]);
     } finally {
       delete process.env["P4M3_FAKE_SECRET"];
     }

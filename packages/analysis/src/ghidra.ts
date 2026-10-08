@@ -113,6 +113,11 @@ export async function analyzeWithGhidra(opts: GhidraOptions): Promise<GhidraResu
       "-Djava.awt.headless=true",
       `-Duser.home=${path.join(p.scratch, "home")}`,
       `-Djava.io.tmpdir=${path.join(p.scratch, "tmp")}`,
+      // Ghidra's defaults are shared per-user dirs (/var/tmp/<user>-ghidra, ~/.config/ghidra).
+      // Keep its cache and settings inside this run's private scratch dir: no state carried
+      // between runs, and concurrent runs cannot collide.
+      `-Dapplication.cachedir=${path.join(p.scratch, "cache")}`,
+      `-Dapplication.settingsdir=${path.join(p.scratch, "settings")}`,
       "-cp",
       check.classpath,
       "ghidra.Ghidra",
