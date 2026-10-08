@@ -1,0 +1,12 @@
+{
+  "name": "@play4m3/station-protocol",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Validated contract between the Station UI (renderer) and the station service (main process)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}

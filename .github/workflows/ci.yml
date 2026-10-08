@@ -1,0 +1,206 @@
+# Main CI (brief §1.5, F1, S11). Every job blocks merge.
+# Third-party actions are pinned to commit SHAs; downloaded tools are pinned by sha256.
+name: ci
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22.22.0"
+
+jobs:
+  check:
+    name: lint, typecheck, test, license, secrets, audit
+    runs-on: ubuntu-24.04
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      # Ubuntu 24.04 blocks unprivileged user namespaces; the analysis sandbox (S13) needs one
+      # for its network namespace and fails closed without it. Relax the host setting, as for Electron.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: pnpm test
+      - run: pnpm scan:license
+      - run: pnpm scan:secrets
+      - name: pnpm audit (high+, documented ignores in pnpm-workspace.yaml)
+        run: pnpm audit --audit-level high
+      - name: S4 report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: s4-obedient-attacker-report
+          path: packages/redteam/out/s4-report.json
+          if-no-files-found: warn
+
+  test-windows:
+    name: tests on Windows (junction cases for S2)
+    runs-on: windows-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: S13 enforcement on Windows (measured, written to the job summary)
+        shell: bash
+        run: node -e "import('./packages/analysis/src/sandbox.ts').then((m) => console.log(JSON.stringify(m.sandboxEnforcement(), null, 2)))" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  electron-smoke-linux:
+    name: hardened shell smoke test (S8 runtime)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @play4m3/desktop build
+      # Ubuntu 24.04 blocks unprivileged user namespaces, which the Chromium sandbox needs.
+      # We relax the host setting instead of passing --no-sandbox, so the test runs sandboxed.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Run shell, assert bridge works and renderer has no Node
+        working-directory: apps/desktop
+        env:
+          P4M3_SMOKE: "1"
+        run: xvfb-run -a pnpm exec electron . 2>&1 | tee smoke.log; grep -q "SMOKE ping=ok" smoke.log
+
+  station-walkthrough:
+    name: Station walkthrough (Electron end-to-end, F5)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @play4m3/desktop build
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Run the walkthrough
+        working-directory: apps/desktop
+        run: xvfb-run -a -s "-screen 0 1280x800x24" node e2e/walkthrough.mjs "$RUNNER_TEMP/station-shots"
+      - name: Screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: station-walkthrough-screenshots
+          path: ${{ runner.temp }}/station-shots
+          if-no-files-found: warn
+
+  ghidra-analysis:
+    name: Ghidra analysis in the sandbox (F4, S13)
+    runs-on: ubuntu-24.04
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      GHIDRA_URL: https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+      GHIDRA_SHA256: ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Ghidra is never bundled (D-039): CI installs the pinned release, checked by sha256.
+      - name: Install Ghidra 12.1.4 (sha256 pinned)
+        run: |
+          curl -sSLf -o "$RUNNER_TEMP/ghidra.zip" "$GHIDRA_URL"
+          echo "$GHIDRA_SHA256  $RUNNER_TEMP/ghidra.zip" | sha256sum -c
+          unzip -q "$RUNNER_TEMP/ghidra.zip" -d "$RUNNER_TEMP"
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: S13 enforcement on Linux (written to the job summary)
+        run: node -e "import('./packages/analysis/src/sandbox.ts').then((m) => console.log(JSON.stringify(m.sandboxEnforcement(), null, 2)))" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Compile Sky Hopper, analyze it with Ghidra in the sandbox, patch it through the Station
+        env:
+          P4M3_REQUIRE_GHIDRA: "1"
+        run: |
+          # The runner image ships a Temurin 21 JDK; its path is in JAVA_HOME_21_X64.
+          export P4M3_JAVA_HOME="$JAVA_HOME_21_X64"
+          export P4M3_GHIDRA_DIR="$RUNNER_TEMP/ghidra_12.1.4_PUBLIC"
+          pnpm exec vitest run packages/analysis/test/ghidra.e2e.test.ts packages/station-service/test/real-analysis.test.ts --reporter=verbose
+
+  gitleaks:
+    name: secret scan (full history)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks 8.30.1 (sha256 pinned)
+        run: |
+          curl -sSLf -o gl.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gl.tgz" | sha256sum -c
+          tar -xzf gl.tgz gitleaks
+      - run: ./gitleaks git . --redact --no-banner --exit-code 1
+
+  osv:
+    name: OSV vulnerability scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install osv-scanner 2.6.0 (sha256 pinned)
+        run: |
+          curl -sSLf -o osv-scanner https://github.com/google/osv-scanner/releases/download/v2.6.0/osv-scanner_linux_amd64
+          echo "ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108  osv-scanner" | sha256sum -c
+          chmod +x osv-scanner
+      - run: ./osv-scanner scan source --config osv-scanner.toml --lockfile pnpm-lock.yaml
+
+  sbom:
+    name: SBOM (CycloneDX)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          syft-version: v1.54.0
+          upload-artifact: false
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json

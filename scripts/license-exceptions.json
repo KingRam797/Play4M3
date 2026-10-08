@@ -1,0 +1,8 @@
+{
+  "truncate-utf8-bytes": {
+    "version": "1.0.2",
+    "license": "WTFPL",
+    "scope": "build-time only (electron-builder -> sanitize-filename); not shipped in the app",
+    "decision": "D-008"
+  }
+}

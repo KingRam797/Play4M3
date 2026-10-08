@@ -1,0 +1,16 @@
+{
+  "name": "@play4m3/core",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Types, trust labels, capability manifest, brand config, deterministic policy engine",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node/fsProbe.ts",
+    "./brand": "./src/brand.ts"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}

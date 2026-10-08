@@ -1,0 +1,11 @@
+# Ignored advisories. Each entry needs a DECISIONS.md line (scope, why, review date).
+
+[[IgnoredVulns]]
+id = "GHSA-ch52-4w7c-c8xp"
+ignoreUntil = 2026-11-06
+reason = "http-cache-semantics via electron-builder > @electron/get; build-time download only, not shipped in the app; no patched version (D-009)"
+
+[[IgnoredVulns]]
+id = "GHSA-hp3w-g68c-fv3c"
+ignoreUntil = 2026-11-06
+reason = "sprintf-js via electron-builder > @electron/get > global-agent; build-time only, not shipped; no patched version (D-009)"

@@ -1,0 +1,122 @@
+# Phase 0 MSIX spike (brief §4, §8.5): build the hardened hello-world as AppX,
+# smoke-test the unpacked app, sideload-install the package with a throwaway
+# test certificate, and run the Windows App Certification Kit (WACK) if the
+# runner has it. The job summary records what actually ran.
+name: windows-msix-spike
+
+on:
+  # No path filter during Phase 0: the spike result gates the shell decision,
+  # and path filters skip the first push of a branch.
+  push:
+    branches: [main, "claude/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22.22.0"
+  # Must match the test identity in apps/desktop/electron-builder.yml.
+  P4M3_APPX_IDENTITY_NAME: P4M3.CreationStation.Test
+  P4M3_APPX_PUBLISHER: CN=P4M3 Test
+
+jobs:
+  msix:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build AppX package
+        working-directory: apps/desktop
+        run: pnpm run dist:appx
+
+      - name: Locate package
+        id: pkg
+        working-directory: apps/desktop
+        run: |
+          $pkg = Get-ChildItem out -Filter *.appx | Select-Object -First 1
+          if (-not $pkg) { throw "no .appx produced" }
+          Write-Host "AppX: $($pkg.Name) $($pkg.Length) bytes"
+          "path=$($pkg.FullName)" >> $env:GITHUB_OUTPUT
+          "size=$($pkg.Length)" >> $env:GITHUB_OUTPUT
+          "### AppX build`n- package: ``$($pkg.Name)```n- size: $([math]::Round($pkg.Length/1MB,1)) MB" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Smoke test unpacked app (S8 runtime, exit code is the signal)
+        working-directory: apps/desktop
+        run: |
+          $exe = Get-ChildItem out/win-unpacked -Filter *.exe | Where-Object { $_.Name -notlike "*Uninstall*" } | Select-Object -First 1
+          $env:P4M3_SMOKE = "1"
+          $p = Start-Process -FilePath $exe.FullName -PassThru -Wait
+          Write-Host "Smoke exit code: $($p.ExitCode)"
+          "- unpacked smoke exit code: $($p.ExitCode)" >> $env:GITHUB_STEP_SUMMARY
+          if ($p.ExitCode -ne 0) { throw "smoke test failed with $($p.ExitCode)" }
+
+      - name: Sign with throwaway test cert and sideload-install
+        run: |
+          $sdk = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -like "*x64*" } | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $sdk) { throw "signtool not found" }
+          $cert = New-SelfSignedCertificate -Type Custom -Subject $env:P4M3_APPX_PUBLISHER -KeyUsage DigitalSignature -FriendlyName "P4M3 spike test" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+          $pfxPass = ConvertTo-SecureString -String ([guid]::NewGuid().ToString()) -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath test.pfx -Password $pfxPass | Out-Null
+          Export-Certificate -Cert $cert -FilePath test.cer | Out-Null
+          Import-Certificate -FilePath test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+          & $sdk.FullName sign /fd SHA256 /sha1 $cert.Thumbprint /s My "${{ steps.pkg.outputs.path }}"
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+          Add-AppxPackage -Path "${{ steps.pkg.outputs.path }}"
+          $installed = Get-AppxPackage -Name $env:P4M3_APPX_IDENTITY_NAME
+          if (-not $installed) { throw "package not installed" }
+          "- sideload install: OK ($($installed.PackageFullName))" >> $env:GITHUB_STEP_SUMMARY
+          Remove-Item test.pfx
+
+      - name: Windows App Certification Kit
+        id: wack
+        run: |
+          $appcert = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\App Certification Kit" -Filter appcert.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $appcert) {
+            "- WACK: **NOT RUN** (appcert.exe not present on runner; see OPEN_QUESTIONS Q-005)" >> $env:GITHUB_STEP_SUMMARY
+            "result=not-run" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          & $appcert.FullName reset
+          & $appcert.FullName test -appxpackagepath "${{ steps.pkg.outputs.path }}" -reportoutputpath "$PWD\wack-report.xml"
+          [xml]$r = Get-Content wack-report.xml
+          $overall = $r.REPORT.OVERALL_RESULT
+          # RESULT may be an attribute or a child element depending on the WACK version; read either.
+          function Get-TestResult($t) { $a = $t.GetAttribute("RESULT"); if ($a) { $a } else { $t.SelectSingleNode("RESULT").InnerText.Trim() } }
+          $all = @($r.SelectNodes("//TEST"))
+          if ($all.Count -gt 0) { Write-Host "WACK first TEST node: $($all[0].OuterXml.Substring(0, [math]::Min(600, $all[0].OuterXml.Length)))" }
+          $nonPass = @($all | Where-Object { (Get-TestResult $_) -ne "PASS" })
+          Write-Host "WACK OVERALL_RESULT=$overall tests=$($all.Count) non-pass=$($nonPass.Count)"
+          "- WACK overall result: **$overall** ($($all.Count) tests, $($nonPass.Count) not PASS)" >> $env:GITHUB_STEP_SUMMARY
+          foreach ($t in $nonPass) {
+            $line = "$($t.GetAttribute('NAME')) = $(Get-TestResult $t) (optional=$($t.GetAttribute('OPTIONAL')))"
+            Write-Host "WACK non-pass: $line"
+            "  - $line" >> $env:GITHUB_STEP_SUMMARY
+            foreach ($m in @($t.SelectNodes("MESSAGES/MESSAGE")) | Select-Object -First 15) { $txt = $m.OuterXml; Write-Host "    msg: $($txt.Substring(0, [math]::Min(400, $txt.Length)))" }
+          }
+          "result=$overall" >> $env:GITHUB_OUTPUT
+          if ($overall -ne "PASS") { throw "WACK result: $overall" }
+
+      - name: Uninstall test package
+        if: always()
+        run: Get-AppxPackage -Name $env:P4M3_APPX_IDENTITY_NAME | Remove-AppxPackage
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: msix-spike
+          path: |
+            apps/desktop/out/*.appx
+            wack-report.xml
+          if-no-files-found: warn

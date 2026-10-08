@@ -1,0 +1,10 @@
+{
+  "name": "@play4m3/skills",
+  "private": true,
+  "version": "0.0.0",
+  "description": "First-party signed, pinned, bundled skill manifests. No runtime fetch.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {}
+}

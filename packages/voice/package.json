@@ -1,0 +1,10 @@
+{
+  "name": "@play4m3/voice",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Push-to-talk, local STT adapter, transcript confirmation, audio-as-data rule",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {}
+}

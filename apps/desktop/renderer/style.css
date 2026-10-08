@@ -1,0 +1,6 @@
+:root { color-scheme: dark; --bg: #070914; --fg: #eef1ff; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+#stage { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+body[data-loading="done"] #stage { display: none; }
+body[data-loading="done"] { overflow: hidden; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

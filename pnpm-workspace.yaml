@@ -1,0 +1,19 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# S11 supply chain: dependency install scripts are OFF unless allowlisted here.
+# Every entry needs a DECISIONS.md line explaining why.
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+strictDepBuilds: true
+
+# Do not resolve versions published less than 3 days ago (typosquat / hijack window).
+minimumReleaseAge: 4320
+
+# Audit ignores: each needs a DECISIONS.md entry with scope and review date.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-ch52-4w7c-c8xp # http-cache-semantics, build-time only via electron-builder (D-009)
+    - GHSA-hp3w-g68c-fv3c # sprintf-js, build-time only via electron-builder (D-009)

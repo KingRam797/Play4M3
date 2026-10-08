@@ -1,0 +1,10 @@
+{
+  "name": "@play4m3/providers",
+  "private": true,
+  "version": "0.0.0",
+  "description": "ModelProvider interface and adapters (codex-sdk, claude-agent-sdk BYO key, gemma-local)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {}
+}
