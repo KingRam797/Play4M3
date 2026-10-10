@@ -9,6 +9,8 @@ using System;
 using System.Runtime.InteropServices;
 public static class TraceWindowInput {
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr wparam, IntPtr lparam);
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
 }
 '@
 New-Item -ItemType Directory -Force evidence | Out-Null
@@ -66,9 +68,15 @@ try {
   $app.Refresh()
   $hwnd = $app.MainWindowHandle
   if ($hwnd -eq [IntPtr]::Zero) { throw 'Application has no main window' }
-  $null = [TraceWindowInput]::PostMessage($hwnd, 0x100, [IntPtr]13, [IntPtr]1)
-  Start-Sleep -Milliseconds 100
-  $null = [TraceWindowInput]::PostMessage($hwnd, 0x101, [IntPtr]13, [IntPtr]1)
+  # The trace snapshot showed the renderer still on its ready canvas: posting
+  # keys to Electron's top-level HWND does not target the renderer input widget.
+  $canvas = Find-Control '^Loading screen' ([Windows.Automation.ControlType]::Image)
+  $rect = $canvas.Current.BoundingRectangle
+  $null = [TraceWindowInput]::SetCursorPos([int]($rect.X + $rect.Width / 2), [int]($rect.Y + $rect.Height / 2))
+  [TraceWindowInput]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+  [TraceWindowInput]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+  Start-Sleep -Milliseconds 500
+  $ws.SendKeys('{ENTER}')
   $stages.Add('Fresh launch and Enter input')
   $check = Find-Control 'I own this game' ([Windows.Automation.ControlType]::CheckBox)
   $check.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle()
