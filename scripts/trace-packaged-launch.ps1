@@ -4,6 +4,13 @@ param([string]$ExecutablePath = 'apps/desktop/out/win-unpacked/Creation Station.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class TraceWindowInput {
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr wparam, IntPtr lparam);
+}
+'@
 New-Item -ItemType Directory -Force evidence | Out-Null
 $source = 'P4M3-ProcessStart'
 $events = [Collections.Generic.List[object]]::new()
@@ -31,6 +38,9 @@ function Find-Control([string]$NamePattern, [System.Windows.Automation.ControlTy
     }
     Start-Sleep -Milliseconds 500
   }
+  $root.FindAll([Windows.Automation.TreeScope]::Descendants, [Windows.Automation.Condition]::TrueCondition) |
+    ForEach-Object { [pscustomobject]@{ name=$_.Current.Name; type=$_.Current.ControlType.ProgrammaticName; enabled=$_.Current.IsEnabled } } |
+    ConvertTo-Json -Depth 3 | Out-File evidence/ui-controls-at-failure.json -Encoding utf8
   throw "UI control not found: $NamePattern"
 }
 function Invoke-Control([string]$NamePattern) {
@@ -53,7 +63,12 @@ try {
   Start-Sleep -Seconds 5
   $ws = New-Object -ComObject WScript.Shell
   $activated = $ws.AppActivate($app.Id)
-  if ($activated) { $ws.SendKeys('{ENTER}') }
+  $app.Refresh()
+  $hwnd = $app.MainWindowHandle
+  if ($hwnd -eq [IntPtr]::Zero) { throw 'Application has no main window' }
+  $null = [TraceWindowInput]::PostMessage($hwnd, 0x100, [IntPtr]13, [IntPtr]1)
+  Start-Sleep -Milliseconds 100
+  $null = [TraceWindowInput]::PostMessage($hwnd, 0x101, [IntPtr]13, [IntPtr]1)
   $stages.Add('Fresh launch and Enter input')
   $check = Find-Control 'I own this game' ([Windows.Automation.ControlType]::CheckBox)
   $check.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle()

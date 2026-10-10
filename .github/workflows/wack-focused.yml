@@ -29,6 +29,8 @@ jobs:
           github-token: ${{ github.token }}
           path: source-package
       - name: Confirm kit selectors and run only the two investigated checks
+        # Already captured by run 38050675124; push retries trace only.
+        if: github.event_name == 'workflow_dispatch'
         run: |
           New-Item -ItemType Directory -Force evidence | Out-Null
           $kit = "${env:ProgramFiles(x86)}\Windows Kits\10\App Certification Kit\appcert.exe"
