@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='utf-8'?>
+<WACK_DIAGNOSTICS source_run="37781569137" source_commit="226579e9fadf551d4dbb41d13fb2022c4d4f8128">
+  <TEST INDEX="45" NAME="App resources" DESCRIPTION="The package should have valid resources defined in the resources.pri file." EXECUTIONTIME="00h:00m:05s.37ms" OPTIONAL="TRUE">
+    <MESSAGES>
+      <MESSAGE TEXT="Image reference &quot;assets\Square150x150Logo.png&quot;: The image &quot;assets\Square150x150Logo.png&quot; failed the size restrictions of 150 X 150." />
+      <MESSAGE TEXT="Image reference &quot;assets\Wide310x150Logo.png&quot;: The image &quot;assets\Wide310x150Logo.png&quot; failed the size restrictions of 310 X 150." />
+    </MESSAGES>
+    <RESULT>FAIL</RESULT>
+  </TEST>
+  <TEST INDEX="88" NAME="Blocked executables" DESCRIPTION="Detects if there are references to process launch APIs and blocked executables" EXECUTIONTIME="00h:00m:16s.31ms" OPTIONAL="TRUE">
+    <MESSAGES>
+      <MESSAGE TEXT="File app\Creation Station.exe contains a reference to a &quot;Launch Process&quot; related API kernel32.dll!CreateProcessW" />
+      <MESSAGE TEXT="File chrome_200_percent.pak contains a blocked executable reference to &quot;ReG&quot;." />
+      <MESSAGE TEXT="File chrome_200_percent.pak contains a blocked executable reference to &quot;Cmd&quot;." />
+      <MESSAGE TEXT="File Creation Station.exe contains a blocked executable reference to &quot;CMd&quot;." />
+      <MESSAGE TEXT="File Creation Station.exe contains a blocked executable reference to &quot;Cdb&quot;." />
+      <MESSAGE TEXT="File Creation Station.exe contains a blocked executable reference to &quot;ReG&quot;." />
+      <MESSAGE TEXT="File Creation Station.exe contains a blocked executable reference to &quot;cSi&quot;." />
+      <MESSAGE TEXT="File Creation Station.exe contains a blocked executable reference to &quot;DNx&quot;." />
+      <MESSAGE TEXT="File Creation Station.exe contains a blocked executable reference to &quot;cmd.exe&quot;." />
+      <MESSAGE TEXT="File Creation Station.exe contains a blocked executable reference to &quot;bash&quot;." />
+      <MESSAGE TEXT="File d3dcompiler_47.dll contains a blocked executable reference to &quot;reg&quot;." />
+      <MESSAGE TEXT="File d3dcompiler_47.dll contains a blocked executable reference to &quot;cmd&quot;." />
+      <MESSAGE TEXT="File dxcompiler.dll contains a blocked executable reference to &quot;CDb&quot;." />
+      <MESSAGE TEXT="File dxcompiler.dll contains a blocked executable reference to &quot;BasH&quot;." />
+      <MESSAGE TEXT="File dxcompiler.dll contains a blocked executable reference to &quot;Dnx&quot;." />
+      <MESSAGE TEXT="File dxcompiler.dll contains a blocked executable reference to &quot;reg&quot;." />
+      <MESSAGE TEXT="File icudtl.dat contains a blocked executable reference to &quot;Reg&quot;." />
+      <MESSAGE TEXT="File resources.pak contains a blocked executable reference to &quot;CDB&quot;." />
+      <MESSAGE TEXT="File resources.pak contains a blocked executable reference to &quot;reG&quot;." />
+      <MESSAGE TEXT="File resources.pak contains a blocked executable reference to &quot;dnX&quot;." />
+      <MESSAGE TEXT="File resources.pak contains a blocked executable reference to &quot;CSi&quot;." />
+      <MESSAGE TEXT="File resources.pak contains a blocked executable reference to &quot;cmd&quot;." />
+      <MESSAGE TEXT="File resources.pak contains a blocked executable reference to &quot;BASh&quot;." />
+      <MESSAGE TEXT="File vk_swiftshader.dll contains a blocked executable reference to &quot;reg&quot;." />
+      <MESSAGE TEXT="File af.pak contains a blocked executable reference to &quot;reg&quot;." />
+      <MESSAGE TEXT="File sv.pak contains a blocked executable reference to &quot;reg&quot;." />
+      <MESSAGE TEXT="File zh-CN.pak contains a blocked executable reference to &quot;Cmd&quot;." />
+      <MESSAGE TEXT="File app.asar contains a blocked executable reference to &quot;reg&quot;." />
+    </MESSAGES>
+    <RESULT>FAIL</RESULT>
+  </TEST>
+</WACK_DIAGNOSTICS>

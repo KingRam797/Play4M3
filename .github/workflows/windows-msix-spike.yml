@@ -103,7 +103,7 @@ jobs:
             $line = "$($t.GetAttribute('NAME')) = $(Get-TestResult $t) (optional=$($t.GetAttribute('OPTIONAL')))"
             Write-Host "WACK non-pass: $line"
             "  - $line" >> $env:GITHUB_STEP_SUMMARY
-            foreach ($m in @($t.SelectNodes("MESSAGES/MESSAGE")) | Select-Object -First 15) { $txt = $m.OuterXml; Write-Host "    msg: $($txt.Substring(0, [math]::Min(400, $txt.Length)))" }
+            foreach ($m in @($t.SelectNodes("MESSAGES/MESSAGE"))) { Write-Host "    msg: $($m.OuterXml)" }
           }
           "result=$overall" >> $env:GITHUB_OUTPUT
           if ($overall -ne "PASS") { throw "WACK result: $overall" }
