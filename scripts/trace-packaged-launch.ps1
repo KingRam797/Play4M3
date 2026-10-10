@@ -1,10 +1,14 @@
 # Windows-only, read-only observation of the packaged executable and descendants.
 # Never enables DevTools, Node integration, remote debugging, or disables a fuse.
+param([string]$ExecutablePath = 'apps/desktop/out/win-unpacked/Creation Station.exe')
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
 New-Item -ItemType Directory -Force evidence | Out-Null
 $source = 'P4M3-ProcessStart'
 $events = [Collections.Generic.List[object]]::new()
 $app = $null
+$stages = [Collections.Generic.List[string]]::new()
 function Drain-Starts {
   foreach ($event in @(Get-Event -SourceIdentifier $source -ErrorAction SilentlyContinue)) {
     $p = $event.SourceEventArgs.NewEvent
@@ -17,6 +21,24 @@ function Drain-Starts {
     Remove-Event -EventIdentifier $event.EventIdentifier
   }
 }
+function Find-Control([string]$NamePattern, [System.Windows.Automation.ControlType]$Type) {
+  for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    $app.Refresh()
+    $root = [Windows.Automation.AutomationElement]::FromHandle($app.MainWindowHandle)
+    $condition = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty, $Type)
+    foreach ($item in $root.FindAll([Windows.Automation.TreeScope]::Descendants, $condition)) {
+      if ($item.Current.Name -match $NamePattern -and $item.Current.IsEnabled) { return $item }
+    }
+    Start-Sleep -Milliseconds 500
+  }
+  throw "UI control not found: $NamePattern"
+}
+function Invoke-Control([string]$NamePattern) {
+  $item = Find-Control $NamePattern ([Windows.Automation.ControlType]::Button)
+  $pattern = $item.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern)
+  $pattern.Invoke()
+  Start-Sleep -Milliseconds 500
+}
 try {
   Register-WmiEvent -Class Win32_ProcessStartTrace -SourceIdentifier $source | Out-Null
   # Positive control proves collection works. It is not part of the app tree.
@@ -24,15 +46,30 @@ try {
   Start-Sleep -Seconds 2
   Drain-Starts
   if (-not ($events | Where-Object { $_.pid -eq $control.Id })) { throw 'Process collector positive control failed' }
-  $exe = Resolve-Path 'apps/desktop/out/win-unpacked/Creation Station.exe'
+  $exe = Resolve-Path $ExecutablePath
   $env:P4M3_USER_DATA_DIR = Join-Path $env:RUNNER_TEMP 'p4m3-launch-trace'
   Remove-Item Env:P4M3_SMOKE -ErrorAction SilentlyContinue
-  $app = Start-Process $exe -PassThru
+  $app = Start-Process $exe -ArgumentList '--force-renderer-accessibility' -PassThru
   Start-Sleep -Seconds 5
   $ws = New-Object -ComObject WScript.Shell
   $activated = $ws.AppActivate($app.Id)
   if ($activated) { $ws.SendKeys('{ENTER}') }
-  Start-Sleep -Seconds 5
+  $stages.Add('Fresh launch and Enter input')
+  $check = Find-Control 'I own this game' ([Windows.Automation.ControlType]::CheckBox)
+  $check.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle()
+  Invoke-Control '^Continue$'
+  $stages.Add('Attest for repository demo fixture')
+  Invoke-Control '^Open sample game$'
+  $stages.Add('Create sample project')
+  Invoke-Control 'player_jump'
+  $stages.Add('Explain player_jump')
+  Invoke-Control '^Make the jump higher$'
+  $stages.Add('Propose demo patch')
+  Invoke-Control '^Reject$'
+  $stages.Add('Reject proposed patch')
+  Invoke-Control '^Activity log'
+  $stages.Add('Open activity log')
+  Start-Sleep -Seconds 2
   Drain-Starts
   $app.Refresh()
   $alive = -not $app.HasExited
@@ -54,11 +91,23 @@ try {
     rootPid = $app.Id
     appAliveAfterObservation = $alive
     enterSent = $activated
-    scope = 'Unpacked packaged executable: fresh launch, Enter input attempt, close. No claim that subsequent Station operations or installed-package activation were exercised.'
+    stages = @($stages)
+    scope = 'Unpacked packaged executable with accessibility enabled: launch, attestation for demo, sample project, explanation, proposal, rejection, activity log, close. Does not exercise installed-package activation, native approval, real analysis, or a physical controller.'
     unexpectedProcessNames = @($tree | Where-Object { $_.name -ne 'Creation Station.exe' })
   } | ConvertTo-Json -Depth 5 | Out-File evidence/trace-summary.json -Encoding utf8
   if (-not $alive -or -not ($tree | Where-Object { $_.pid -eq $app.Id })) { throw 'App observation incomplete' }
 } finally {
+  Drain-Starts
+  if ($app -and -not (Test-Path evidence/trace-summary.json)) {
+    $partialIds = [Collections.Generic.HashSet[int]]::new()
+    $null = $partialIds.Add($app.Id)
+    do {
+      $added = $false
+      foreach ($e in $events) { if ($partialIds.Contains($e.parent) -and $partialIds.Add($e.pid)) { $added = $true } }
+    } while ($added)
+    @($events | Where-Object { $partialIds.Contains($_.pid) }) | ConvertTo-Json -Depth 4 | Out-File evidence/app-process-tree-partial.json -Encoding utf8
+  }
+  $stages | ConvertTo-Json | Out-File evidence/trace-stages.json -Encoding utf8
   Unregister-Event -SourceIdentifier $source -ErrorAction SilentlyContinue
   Get-Event -SourceIdentifier $source -ErrorAction SilentlyContinue | Remove-Event
   if ($app -and -not $app.HasExited) { Stop-Process -Id $app.Id -ErrorAction SilentlyContinue }
